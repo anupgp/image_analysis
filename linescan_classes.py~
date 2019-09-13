@@ -86,19 +86,16 @@ class ZeissClass:
                     print(self.attachimage.shape)
                     show_metadata(self.attachimage_metadata)
                 if attachment.attachment_entry.name == 'TimeStamps':
-                    self.timestamps = attachment.data()
-                    if ("SizeT" in self.metadata):
-                        print('SizeT: ',self.metadata['SizeT'])
-                        self.timestamps = self.timestamps[0:self.metadata['SizeT']-1]
-                        print(self.timestamps.shape)
+                    timestamps = attachment.data()
+                    print(timestamps.shape)
                 if attachment.attachment_entry.name == 'EventList':
-                    # self.event = {'time':0,'type':'','name':''}
-                    self.events = []
+                    eventlist = []
                     for item in attachment.data():
-                        self.events.append({'time':item.time,'type':item.EV_TYPE[item.event_type],'name':item.description})
-                    self.eventtimes = [item['time'] for item in self.events]
-                    print(self.eventtimes)
-                    
+                        print(item.description)
+                        print(item.EV_TYPE)
+                        print(item.time)
+
+
     def get_lineselect_image(self,channels=[0,1,2]):
         if hasattr(self,'attachimage'):
             print('Found lineselect image')
@@ -124,6 +121,7 @@ class ZeissClass:
             y2 = self.attachimage_metadata['X2'] # 512
             fh = plt.figure()
             ah = plt.subplot(111)
+            # roiselect = roilinescan.ROILineScan(fh,ah)
             ah.imshow(img,interpolation='nearest',origin='lower',aspect='equal')
             # ah.plot([x1,x2],[y1,y2],color='blue')
             ah.annotate("",xy=(x2,y2),xytext=(x1,y1),arrowprops=dict(color='w',arrowstyle='->'))
@@ -132,50 +130,3 @@ class ZeissClass:
             plt.show()
                     
 
-    def select_roi_linescan(self):
-        """ Class method to select roi on a linescan time series image from Zeiss LSM microscope """
-        if (not hasattr(self,'timestamps')):
-            print('Exiting. No timestamps attribute in the object')
-            exit  
-        if (not hasattr(self,'eventtimes')):
-            print('No eventtimes in the object')
-            exit
-        # seperate trials/blocks and compartments from a given linescan image by finding breaks
-        ts = self.timestamps
-
-        tsdiff = np.diff(ts)
-        itbreaks = np.where(tsdiff>1)[0] # breaks = number of timestamp sections seperated by > 1 sec
-        if (len(itbreaks)>0):
-            it0trials = np.concatenate((np.array([0]),itbreaks+1))
-            it9trials = np.concatenate((itbreaks,np.array([len(ts)-1])))
-        else:
-            it0trials = np.array([0])
-            it9trials = np.array([len(ts)-1])
-
-        eventtimes = self.eventtimes
-        tevents = []
-
-        # split the eventtimes into eventtimes in each trial
-        for i in np.arange(0,len(it0trials)):
-            tevents.append(np.array([evt for evt in eventtimes if (evt>=ts[it0trials[i]]) and (evt<ts[it9trials[i]])]))
-        
-        # Get linescan timeseries image
-        lsts = np.transpose(self.data[0,0,0,0:1000,0,0,:,0])
-        print(lsts.shape)
-        fh = plt.figure()
-        ah = plt.subplot(111)
-        roiselect = roilinescan.ROILineScan(fh,ah)
-        ah.imshow(lsts,interpolation='none',cmap='jet',origin='upper',aspect='equal')
-        plt.show()
-
-
-
-        # print(ievts)
-        # info: multiple trials mean that timestamps are seperated by the inter-trial iterval (> 1 sec)
-        # print(itrials)
-        # fh = plt.figure()
-        # ah = plt.subplot(111)
-        # ah.plot(self.timestamps)
-        # for i in np.arange(0,4):
-        #     ah.plot([it9trials[i],it9trials[i]],[36000,37000])
-        # plt.show()

@@ -1,9 +1,12 @@
 import linescan_classes
 
-# filepath = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190415/C3/Image 11 Block 1.czi'
-# linescanfile1 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190726/S1C1S1/2hz/Image 46.czi'
+
 linescanfile1 = '/Users/macbookair/Downloads/Image 46.czi'
 linescanfile2 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190417/C3/Image 11 Block 1.czi'
+linescanfile3 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190415/C3/Image 11 Block 1.czi'
+linescanfile4 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190726/S1C1S1/2hz/Image 46.czi'
+linescanfile5 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190416/S2C1S1/Image 113 Block 1.czi'
+# linescanfile6 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190416/S2C1S1/Image 111.czi'
 
 imagepath = '/Users/macbookair/goofy//data/beiquelab/linescan_testdata.czi'
 # snfr = ZeissLinescan(filepath)
@@ -13,8 +16,9 @@ lineselect1 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190829/s1c1s
 lineselect2 = '/Volumes/Anup_2TB//raw_data/beiquelab/zen/data_anup/20190417/S2C1/Image 64.czi'
 # frame =ZeissFramescan(lineselect)
 # frame.read_single_framescan_with_czifile()
-linescan = linescan_classes.ZeissClass(linescanfile1)
-linescan.get_lineselect_image()
+linescan = linescan_classes.ZeissClass(linescanfile5)
+# linescan.get_lineselect_image()
+linescan.select_roi_linescan()
 
 
 # linescan.show_metadata()
