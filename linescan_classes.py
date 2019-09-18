@@ -167,6 +167,8 @@ class ZeissClass:
         roiselect = roilinescan.ROILineScan(fh,ah)
         ah.imshow(lsts,interpolation='none',cmap='jet',origin='upper',aspect='equal')
         plt.show()
+        print('Number of ROIs: ',roiselect.roicount)
+        print(roiselect.coords)
 
 
 

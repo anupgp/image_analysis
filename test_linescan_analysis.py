@@ -2,9 +2,11 @@ import linescan_classes
 
 
 linescanfile1 = '/Users/macbookair/Downloads/Image 46.czi'
-linescanfile2 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190417/C3/Image 11 Block 1.czi'
+# linescanfile2 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190417/C3/Image 11 Block 1.czi'
+linescanfile2 = '/Users/macbookair/goofy/codes/programing/python/image_analysis/sample_data/Image 11 Block 1.czi'
 linescanfile4 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190726/S1C1S1/2hz/Image 46.czi'
-linescanfile5 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190416/S2C1S1/Image 113 Block 1.czi'
+# linescanfile5 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190416/S2C1S1/Image 113 Block 1.czi'
+linescanfile5 = '/Users/macbookair/goofy/codes/programing/python/image_analysis/sample_data/Image 113 Block 1.czi'
 # linescanfile6 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190416/S2C1S1/Image 111.czi'
 
 imagepath = '/Users/macbookair/goofy//data/beiquelab/linescan_testdata.czi'

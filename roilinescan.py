@@ -1,45 +1,76 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import copy
 
 class ROILineScan:
     def __init__(self,_fh,_ah):
         self.fig = _fh
+        self.roicount = 0
         self.axis = _ah
-        self.xyTdn = [None,None]
-        self.xyBdn = [None,None]
-        self.lineTdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTdn[1],self.xyTdn[1]],color='blue',linewidth=2)
-        self.lineBdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyBdn[1],self.xyBdn[1]],color='red',linewidth=2)
-        self.xyTsp = [None,None]
-        self.xyBsp = [None,None]
-        self.lineTsp, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTsp[1],self.xyTsp[1]],color='yellow',linewidth=2,linestyle='-')
-        self.lineBsp, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyBsp[1],self.xyBsp[1]],color='green',linewidth=2,linestyle='-')
-        self.region = 'None'
-        self.boundary = "None"
+        self.roi_initialize()
         self.key = None
         self.x = None
         self.y = None
+        self.coord = {'dnTop':None,'dnBot':None,'spTop':None,'spBot':None}
+        self.coords=[]          # a list of all the ROI coordinates
         self.action = self.region+': '+self.boundary
         self.actiondisplay = self.axis.text(0.5,0.95,self.action,fontsize=12,horizontalalignment='center',verticalalignment='center',transform=self.fig.transFigure)
+        self.roicount_text = 'Number of ROIs saved: '+ str(self.roicount)
+        self.roicountdisplay = self.axis.text(0.5,0.90,self.roicount_text,fontsize=12,horizontalalignment='center',verticalalignment='center',transform=self.fig.transFigure)
         self.connect()
-    
+
+    def roi_initialize(self):
+        self.region = 'None'
+        self.boundary = "None"
+        self.xyTdn = [None,None]
+        self.xyBdn = [None,None]
+        self.xyTsp = [None,None]
+        self.xyBsp = [None,None]
+        self.lineTdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTdn[1],self.xyTdn[1]],color='blue',linewidth=2)
+        self.lineBdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyBdn[1],self.xyBdn[1]],color='red',linewidth=2)
+        self.lineTsp, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTsp[1],self.xyTsp[1]],color='yellow',linewidth=2,linestyle='-')
+        self.lineBsp, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyBsp[1],self.xyBsp[1]],color='green',linewidth=2,linestyle='-')
+    def clear_roi(self):
+        self.xyTdn = [None,None]
+        self.xyBdn = [None,None]
+        self.xyTsp = [None,None]
+        self.xyBsp = [None,None]
+        self.coord['dnTop'] = self.xyTdn[1]
+        self.coord['dnBot'] = self.xyBdn[1]
+        self.coord['spTop'] = self.xyTsp[1]
+        self.coord['spBot'] = self.xyBsp[1]
+        self.plot_lineTdn()
+        self.plot_lineBdn()
+        self.plot_lineTsp()
+        self.plot_lineBsp()
+        self.roicountdisplay.set_text(self.roicount_text)
+        self.roicountdisplay.figure.canvas.draw()
+        
     def action_switcher(self,key):
         switcher = {
-            'x':self.action_inactive,
-            'd':self.region_dendrite,
-            'p':self.region_spine,
-            't':self.boundary_top,
-            'b':self.boundary_bottom
+            'x':self.action_inactive, # deactivates the interactive functionalities
+            'd':self.region_dendrite, # select region is dendrite
+            'p':self.region_spine,    # select region is spine
+            't':self.boundary_top,    # select ROI top
+            'b':self.boundary_bottom,  # select ROI bottom
+            'n':self.start_new_roi     # save the current coordinates and start a new ROI
         }
         func = switcher.get(key,lambda:"Invalid key")
         return(func())
 
-    def get_coordinates(self):
-        coord = {'dnTop':None,'dnBot':None,'spTop':None,'spBot':None}
-        coord['dnTop'] = self.xyTdn[1]
-        coord['dnBot'] = self.xyBdn[1]
-        coord['spTop'] = self.xyTsp[1]
-        coord['spBot'] = self.xyBsp[1]
-        return(coord)
+    def save_coordinates(self):
+        self.coord['dnTop'] = self.xyTdn[1]
+        self.coord['dnBot'] = self.xyBdn[1]
+        self.coord['spTop'] = self.xyTsp[1]
+        self.coord['spBot'] = self.xyBsp[1]
+        if(((self.xyTdn[1] != None) and (self.xyBdn[1] != None)) or
+           ((self.xyTsp[1] != None) and (self.xyBsp[1] != None))):
+            self.coords.append(copy.deepcopy(self.coord))
+            self.roicount = self.roicount+1
+            print('ROI #{c} saved'.format(c=self.roicount))
+            self.clear_roi()
+        else:
+            print('ROI #{n} empty'.format(n=self.roicount))
         
     def __call__(self,event):
         if(event.name == 'button_press_event'):
@@ -63,6 +94,9 @@ class ROILineScan:
             self.action = self.region+': '+self.boundary
             self.actiondisplay.set_text(self.action)
             self.actiondisplay.figure.canvas.draw()
+            self.roicount_text = 'Number of ROIs saved: '+ str(self.roicount)
+            self.roicountdisplay.set_text(self.roicount_text)
+            self.roicountdisplay.figure.canvas.draw()
             
         if (event.name == 'motion_notify_event'):
             self.x = event.x
@@ -71,7 +105,11 @@ class ROILineScan:
     def action_inactive(self):
         self.region = "None"
         self.boundary = "None"
+        self.clear_roi()
 
+    def start_new_roi(self):
+        self.save_coordinates()
+        
     def region_dendrite(self):
         self.region  = "Dendrite"
 
