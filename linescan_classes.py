@@ -20,6 +20,9 @@ metadata_elements = [{"name":"./Metadata/Information/Image/","tags":["PixelType"
                      {"name":"./Metadata/Layers/Layer/Elements/OpenArrow/Geometry/","tags":[]},
                      {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/Lasers/Laser/","tags":[]}]
 
+def keypress_callback(event):
+    pass
+
 def metadata_xmlstr_to_metadata_dict(metadata_xmlstr):
     root = ET.fromstring(metadata_xmlstr)
     metadata={}
@@ -144,31 +147,44 @@ class ZeissClass:
         ts = self.timestamps
 
         tsdiff = np.diff(ts)
-        itbreaks = np.where(tsdiff>1)[0] # breaks = number of timestamp sections seperated by > 1 sec
-        if (len(itbreaks)>0):
-            it0trials = np.concatenate((np.array([0]),itbreaks+1))
-            it9trials = np.concatenate((itbreaks,np.array([len(ts)-1])))
+        itrials = np.where(tsdiff>1)[0] # breaks = number of timestamp sections seperated by > 1 sec
+        if (len(itrials)>0):
+            ifirst = np.concatenate((np.array([0]),itrials+1))
+            ilast = np.concatenate((itrials,np.array([len(ts)-1])))
         else:
-            it0trials = np.array([0])
-            it9trials = np.array([len(ts)-1])
+            ifirst = np.array([0])
+            ilast = np.array([len(ts)-1])
 
         eventtimes = self.eventtimes
         tevents = []
 
         # split the eventtimes into eventtimes in each trial
-        for i in np.arange(0,len(it0trials)):
-            tevents.append(np.array([evt for evt in eventtimes if (evt>=ts[it0trials[i]]) and (evt<ts[it9trials[i]])]))
-        
-        # Get linescan timeseries image
-        lsts = np.transpose(self.data[0,0,0,0:1000,0,0,:,0])
-        print(lsts.shape)
+        for i in np.arange(0,len(ifirst)):
+            tevents.append(np.array([evt for evt in eventtimes if (evt>=ts[ifirst[i]]) and (evt<ts[ilast[i]])]))
+
         fh = plt.figure()
         ah = plt.subplot(111)
-        roiselect = roilinescan.ROILineScan(fh,ah)
-        ah.imshow(lsts,interpolation='none',cmap='jet',origin='upper',aspect='equal')
+        # kpid = fh.canvas.mpl_connect('key_press_event',keypress_callback)
+
+        
+            
+        # Get linescan timeseries image
+        # for i in np.arange(0,len(ifirst)):
+        lsts = copy.deepcopy(np.transpose(self.data[0,0,0,:,0,0,:,0]))
+        # ih = ah.imshow(lsts,interpolation='none',cmap='jet',origin='upper',aspect='equal')
+        # trialstr = "Trial "+str(i+1)
+        roiselect = roilinescan.ROILineScan(fh,ah,lsts,ifirst,ilast)
         plt.show()
+        # ih.set_data(lsts)
+        # fh.canvas.draw_idle()
         print('Number of ROIs: ',roiselect.roicount)
         print(roiselect.coords)
+        # while (kpevent.key == 'N'):
+        #     pass
+        # del roiselect
+        # plt.cla()
+        
+
 
 
 

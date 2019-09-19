@@ -17,7 +17,7 @@ lineselect1 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190829/s1c1s
 lineselect2 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190417/S2C1/Image 64.czi'
 # frame =ZeissFramescan(lineselect)
 # frame.read_single_framescan_with_czifile()
-linescan = linescan_classes.ZeissClass(linescanfile1)
+linescan = linescan_classes.ZeissClass(linescanfile2)
 linescan.get_lineselect_image()
 linescan.select_roi_linescan()
 
