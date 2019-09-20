@@ -30,11 +30,11 @@ class ROILineScan:
         self.xyBdn = [None,None]
         self.xyTsp = [None,None]
         self.xyBsp = [None,None]
-        self.itrial = 1
+        self.itrial = 1         # index start at 0
         self.title = 'Trial: '+str(self.itrial)
-        lsts0 = self.lsts[:,self.ifirst[self.itrial]:self.ilast[self.itrial]]
+        lsts0 = self.lsts[:,self.ifirst[self.itrial-1]:self.ilast[self.itrial-1]]
         print(self.lsts)
-        self.ih = self.axis.imshow(lsts0,interpolation='none',cmap='jet',origin='upper',aspect='equal')
+        self.ih = self.axis.imshow(lsts0,interpolation='nearest',cmap='jet',origin='lower',aspect='equal')
         self.lineTdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTdn[1],self.xyTdn[1]],color='blue',linewidth=2)
         self.lineBdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyBdn[1],self.xyBdn[1]],color='red',linewidth=2)
         self.lineTsp, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTsp[1],self.xyTsp[1]],color='yellow',linewidth=2,linestyle='-')
@@ -75,6 +75,7 @@ class ROILineScan:
         saved = False
         if(((self.xyTdn[1] != None) and (self.xyBdn[1] != None)) or
            ((self.xyTsp[1] != None) and (self.xyBsp[1] != None))):
+            self.roicount = self.roicount+1
             self.coord['itrial'] = self.itrial
             self.coord['iroi'] =  self.roicount
             self.coord['dnTop'] = self.xyTdn[1]
@@ -82,7 +83,6 @@ class ROILineScan:
             self.coord['spTop'] = self.xyTsp[1]
             self.coord['spBot'] = self.xyBsp[1]
             self.coords.append(copy.deepcopy(self.coord))
-            self.roicount = self.roicount+1
             print('ROI #{c} saved'.format(c=self.roicount))
             self.clear_roi()
             saved = True
@@ -127,16 +127,16 @@ class ROILineScan:
         self.clear_roi()
 
     def start_new_trial(self):
-        if(self.itrial > len(self.ifirst)):
+        if(self.itrial >= len(self.ifirst)):
             print('Reached the last trial!')
         else:
             saved = self.save_coordinates()
             self.roicount = 0
             self.itrial = self.itrial+1
-            self.title = 'Trial: '+str(self.itrial)
+            self.title = 'Trial: ' + str(self.itrial)
             self.titledisplay.set_text(self.title)
             self.titledisplay.figure.canvas.draw()
-            lsts0 = self.lsts[:,self.ifirst[self.itrial]:self.ilast[self.itrial]]
+            lsts0 = self.lsts[:,self.ifirst[self.itrial-1]:self.ilast[self.itrial-1]] # itrial start at index 1
             self.ih.set_data(lsts0)
             self.fig.canvas.draw_idle()
     

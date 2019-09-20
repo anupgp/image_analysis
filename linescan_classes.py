@@ -125,6 +125,8 @@ class ZeissClass:
             y1 = self.attachimage_metadata['X1'] # 0
             x2 = self.attachimage_metadata['Y2'] # 256
             y2 = self.attachimage_metadata['X2'] # 512
+
+            # plot linescan select image
             fh = plt.figure()
             ah = plt.subplot(111)
             ah.imshow(img,interpolation='nearest',origin='lower',aspect='equal')
@@ -132,7 +134,8 @@ class ZeissClass:
             ah.annotate("",xy=(x2,y2),xytext=(x1,y1),arrowprops=dict(color='w',arrowstyle='->'))
             ah.set_xlim([0,sizex])
             ah.set_ylim([0,sizey])
-            plt.show()
+            # plt.show()
+            return(fh,ah)
                     
 
     def select_roi_linescan(self):
@@ -162,38 +165,18 @@ class ZeissClass:
         for i in np.arange(0,len(ifirst)):
             tevents.append(np.array([evt for evt in eventtimes if (evt>=ts[ifirst[i]]) and (evt<ts[ilast[i]])]))
 
+        print('ifirst: ',ifirst)
+        print('ilast: ',ilast)
+        print('tevents: ',tevents)
+        # Call to Linescan timeseries ROI selection object
         fh = plt.figure()
         ah = plt.subplot(111)
-        # kpid = fh.canvas.mpl_connect('key_press_event',keypress_callback)
-
-        
-            
         # Get linescan timeseries image
-        # for i in np.arange(0,len(ifirst)):
         lsts = copy.deepcopy(np.transpose(self.data[0,0,0,:,0,0,:,0]))
-        # ih = ah.imshow(lsts,interpolation='none',cmap='jet',origin='upper',aspect='equal')
-        # trialstr = "Trial "+str(i+1)
         roiselect = roilinescan.ROILineScan(fh,ah,lsts,ifirst,ilast)
-        plt.show()
-        # ih.set_data(lsts)
-        # fh.canvas.draw_idle()
-        print('Number of ROIs: ',roiselect.roicount)
-        print(roiselect.coords)
-        # while (kpevent.key == 'N'):
-        #     pass
-        # del roiselect
-        # plt.cla()
-        
+        self.coords = roiselect.coords
 
+        return(fh,ah)
 
-
-
-        # print(ievts)
-        # info: multiple trials mean that timestamps are seperated by the inter-trial iterval (> 1 sec)
-        # print(itrials)
-        # fh = plt.figure()
-        # ah = plt.subplot(111)
-        # ah.plot(self.timestamps)
-        # for i in np.arange(0,4):
-        #     ah.plot([it9trials[i],it9trials[i]],[36000,37000])
-        # plt.show()
+    def extract_roi_timeseries(self):
+        pass

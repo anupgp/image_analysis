@@ -1,5 +1,5 @@
 import linescan_classes
-
+from matplotlib import pyplot as plt
 
 linescanfile1 = '/Users/macbookair/Downloads/Image 46.czi'
 # linescanfile2 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190417/C3/Image 11 Block 1.czi'
@@ -17,9 +17,11 @@ lineselect1 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190829/s1c1s
 lineselect2 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190417/S2C1/Image 64.czi'
 # frame =ZeissFramescan(lineselect)
 # frame.read_single_framescan_with_czifile()
-linescan = linescan_classes.ZeissClass(linescanfile2)
-linescan.get_lineselect_image()
-linescan.select_roi_linescan()
+linescan = linescan_classes.ZeissClass(linescanfile1)
+fh1,ah1 = linescan.get_lineselect_image()
+fh2,ah2 = linescan.select_roi_linescan()
+plt.show()
+print(linescan.coords)
 
 
 # linescan.show_metadata()
