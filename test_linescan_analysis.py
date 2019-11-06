@@ -1,30 +1,36 @@
-import linescan_classes
+import zeissImageClasses
+from zeissImageClasses import compress_filename
 from matplotlib import pyplot as plt
 import h5py
 
-linescanfile1 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190704/S1C1E3/Image 23.czi'
-linescanfile2 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190725/S1C1S1/20hz/Image 91.czi'
-# linescanfile2 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190417/C3/Image 11 Block 1.czi'
-linescanfile2 = '/Users/macbookair/goofy/codes/programing/python/image_analysis/sample_data/Image 11 Block 1.czi'
-linescanfile4 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190726/S1C1S1/2hz/Image 46.czi'
-# linescanfile5 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190416/S2C1S1/Image 113 Block 1.czi'
-linescanfile5 = '/Users/macbookair/goofy/codes/programing/python/image_analysis/sample_data/Image 113 Block 1.czi'
-linescanfile6 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190416/S2C1S1/Image 111.czi'
+fnlsts = "/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190828/s1c1s1/Image 72 Block 1.czi"
+fnlsls = "/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190828/s1c1s1/Image 71.czi"
 
-imagepath = '/Users/macbookair/goofy//data/beiquelab/linescan_testdata.czi'
-# snfr = ZeissLinescan(filepath)
-# print(snfr.lsts)
-framefile = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190702/S1C1/Image 2.czi'
-lineselect1 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190829/s1c1s1/Image 30.czi'
-lineselect2 = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190417/S2C1/Image 64.czi'
-# frame =ZeissFramescan(lineselect)
-# frame.read_single_framescan_with_czifile()
-linescan = linescan_classes.ZeissClass(linescanfile2)
-fh1,ah1 = linescan.get_lineselect_image()
-fh2,ah2 = linescan.select_roi_linescan()
+zfilelsts = zeissImageClasses.ZeissImageClass(fnlsts)
+zfilelsls = zeissImageClasses.ZeissImageClass(fnlsls)
+# print(zfile.img_type)
+# zeissImageClasses.show_metadata(zfile.metadata)
+# print('--------------------------------------')
+# zeissImageClasses.show_metadata(zfile.attachimage_metadata)
+# print('--------------------------------------')
+# print(zfile.attachment_names)
+# X and Y are flipped to match the image orientation
+# x1 = zfile.attachimage_metadata['Y1']
+# y1 = zfile.attachimage_metadata['X1']
+# x2 = zfile.attachimage_metadata['Y2']
+# y2 = zfile.attachimage_metadata['X2']
+# zeissImageClasses.display_lineselect_image(zfile.attachimage,1,x1,y1,x2,y2,zfile.img) # only linescan select
+fh1,ah1 = zeissImageClasses.display_lineselect_image(zfilelsls.attachimage,1,title=compress_filename(fnlsls,3))
+# zeissImageClasses.display_lineselect_image(zfile.attachimage,1,title=compress_filename(infile,3),savepath='/Users/macbookair')
+# zeissImageClasses.display_lineselect_image(zfile.img)
+# zeissImageClasses.show_metadata(zfile.attachimage_metadata)
+fh2,ah2 = zfilelsts.select_roi_linescan()
 plt.show()
-linescan.extract_roi()
-print(linescan.roidf)
+zfilelsts.extract_roi()
+print(zfilelsts.roidf)
+zfilelsts.save_roi_to_csvfile(fname=compress_filename(fnlsts,3),savepath='/Users/macbookair')
+# linescan.save_roidf(fnameout)
+
 # print(linescan.coords)
 
 
