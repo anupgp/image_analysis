@@ -15,25 +15,6 @@ def alphaFunction(t,delay,risetime,peak,decaytime):
     h[h<0] = 0
     return(h)
 
-# def alphaFunctionMulti(t,args):
-#     nparams = len(args)
-#     print(nparams)
-#     nstim = int((nparams)/4)
-#     h = np.zeros(len(t))
-#     for i in np.arange(0,nstim):
-#         istart = i*4
-#         delay = args[istart]
-#         risetime = args[istart+1]
-#         peak = args[istart+2]
-#         decaytime = args[istart+3]
-#         print(delay,risetime,peak,decaytime)
-#         tpeak = delay + (((decaytime*risetime)/(decaytime-risetime))*np.log(decaytime/risetime))
-#         peakNormFact =  1/(-np.exp(-(tpeak-delay)/risetime)+np.exp(-(tpeak-delay)/decaytime))
-#         hnew = peak*peakNormFact*(np.exp(-(t-delay)/decaytime)-np.exp(-(t-delay)/risetime))
-#         hnew[hnew<0] = 0
-#         h = h + hnew
-#     return(h)
-
 def alphaFunctionMulti(t,*args):
     nparams = len(args)
     # print(nparams)
@@ -65,48 +46,26 @@ def alphaFunctionMultiExtract(t,params,n=100):
         decaytime = params[istart+3]
         y[:,i] = alphaFunction(t,delay,risetime,peak,decaytime)
     return(y)
-        
 
-# def alphaFunctionMulti(params):
-#     nparams = len(params)
-#     nstim = int((nparams-1)/4)
-#     t = params[0]               # the first argument is time
-#     h = np.zeros(len(t))
-#     for i in np.arange(0,nstim):
-#         istart = (i*4)+1
-#         delay = params[istart]
-#         risetime = params[istart+1]
-#         peak = params[istart+2]
-#         decaytime = params[istart+3]
-#         tpeak = delay + (((decaytime*risetime)/(decaytime-risetime))*np.log(decaytime/risetime))
-#         peakNormFact =  1/(-np.exp(-(tpeak-delay)/risetime)+np.exp(-(tpeak-delay)/decaytime))
-#         hnew = peak*peakNormFact*(np.exp(-(t-delay)/decaytime)-np.exp(-(t-delay)/risetime))
-#         hnew[hnew<0] = 0
-#         h = h + hnew
-#     return(h)
-        
-# def splitArgs(npulses,isi):
-#     def alphaFunctionMulti(t,*params):
-#         # parse individual parameters
-#         delays = np.zeros(npulses)
-#         risetimes = np.zeros(npulses)
-#         peaks  = np.zeros(npulses)
-#         decaytimes  = np.zeros
-#         for i in np.arange(0,npulses):
-            
-#         return(
+def getinfo_roicsv(roicsv):
+    # Find the number of ROI types, ROIs and trials in an roicsv file
+    colnames = roicsv.columns
+    print(colnames)
 
-roifn = '/Users/macbookair/20190828_s1c1s1_Image72Block1.csv'
+roifn = '/Users/macbookair/20190415_C3_Image5Block1.csv'
+# roifn = '/Users/macbookair/20190828_s1c1s1_Image72Block1.csv'
 # roifn = '/Users/macbookair/20190418_S1E1_Image22Block1.csv'
+
+
 with open(roifn,'r') as csvfile:
     roicsv = pd.read_csv(csvfile)
 
 fh = plt.figure()
 ah = plt.subplot(111)
 
-t = roicsv['time_trial2roi1'].to_numpy()
-y = roicsv['spine_trial2roi1'].to_numpy()
-s = roicsv['stim_trial2roi1'].to_numpy()
+t = roicsv['time_trial5roi1'].to_numpy()
+y = roicsv['spine_trial5roi1'].to_numpy()
+s = roicsv['stim_trial5roi1'].to_numpy()
 # values to generate initial parameters for curve fit
 nstim = len(np.where(s>0)[0])   # number of stimulii
 tstim0 = t[np.where(s>0)[0][0]] # time of first stimulus
@@ -134,27 +93,21 @@ maxpeaks = [10]*nstim
 maxdecaytimes = [0.2]*nstim
 minbounds =tuple(np.ndarray.flatten(np.transpose(np.array([mindelays,minrisetimes,minpeaks,mindecaytimes]))))
 maxbounds = tuple(np.ndarray.flatten(np.transpose(np.array([maxdelays,maxrisetimes,maxpeaks,maxdecaytimes]))))
-print(minbounds,len(minbounds))
-print(maxbounds,len(minbounds))
-# 
-plt.plot(t1,y1,color='black')
-plt.plot(t1,s1,color='red')
 initialparams = minbounds
-# initialparams = [t1,0.1,0.005,0.3,0.1,0.1+0.125,0.005,0.3,0.1,0.1+(0.125*2),0.005,0.3,0.1,0.1+(0.125*3),0.005,0.3,0.1,0.1+(0.125*4),0.005,0.3,0.1,0.1+(0.125*5),0.005,0.3,0.1,0.1+(0.125*6),0.005,0.3,0.1,0.1+(0.125*7),0.005,0.3,0.1]
-# initialparams = [0.1,0.005,0.3,0.1,0.1+0.125,0.005,0.3,0.1,0.1+(0.125*2),0.005,0.3,0.1,0.1+(0.125*3),0.005,0.3,0.1,0.1+(0.125*4),0.005,0.3,0.1,0.1+(0.125*5),0.005,0.3,0.1,0.1+(0.125*6),0.005,0.3,0.1,0.1+(0.125*7),0.005,0.3,0.1]
-
-# h1 = alphaFunctionMulti(t1,initialparams)
 # params,params_covariance = optimize.curve_fit(alphaFunctionMulti,t1,y1,initialparams)
 params,params_covariance = optimize.curve_fit(alphaFunctionMulti,t1,y1,initialparams,bounds=(minbounds,maxbounds))
 h = alphaFunctionMulti(t1,*params)
 yy = alphaFunctionMultiExtract(t1,params)
-print(yy.shape)
-plt.plot(t1,h,color='blue')
-for i in range(0,yy.shape[1]):
-    plt.plot(t1,yy[:,i],linewidth=2)
-# h3 = alphaFunction(t1-t1[0],params[0],params[1],params[2],params[3])
-# plt.plot(t1,h3)
-plt.show()
+# -------------------
+getinfo_roicsv(roicsv)
+# ------------------
+# plotting
+# plt.plot(t1,y1,color='black')
+# plt.plot(t1,s1,color='red')
+# plt.plot(t1,h,color='blue')
+# for i in range(0,yy.shape[1]):
+#     plt.plot(t1,yy[:,i],linewidth=2)
+# plt.show()
 
 
 

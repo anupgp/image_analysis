@@ -45,8 +45,15 @@ def display_lineselect_image(img,channelid,x1=256,y1=0,x2=256,y2=512,linescan=[]
     fh = plt.figure()
     ah1 = plt.subplot(111)
     ah1.imshow(img,interpolation='nearest',origin='lower',aspect='equal')
-    ah1.plot([x1,x2],[y1,y2])
-    ah1.annotate("",xy=(x2,y2),xytext=(x1,y1),arrowprops=dict(color='w',arrowstyle='->'))
+    # adjust coordinates to reflect image orientation
+    y1 = 512-y1
+    y2 = 512-y2
+    # flip the axis
+    xx1,xx2 = [x1,x2]
+    x1,x2 = [y1,y2]
+    y1,y2 = [xx1,xx2]
+    ah1.plot([x1,x2],[y1,y2],color='yellow')
+    ah1.annotate("",xy=(x1,y1),xytext=(x2,y2),xycoords='data',arrowprops=dict(color='w',arrowstyle='<-'))
     ah1.set_xlim([0,len(img)])
     ah1.set_ylim([0,len(img)])
     ah1.set_title(title)
