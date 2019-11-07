@@ -45,13 +45,27 @@ def alphaFunctionMulti(t,*args):
         risetime = args[istart+1]
         peak = args[istart+2]
         decaytime = args[istart+3]
-        # print(delay,risetime,peak,decaytime)
-        tpeak = delay + (((decaytime*risetime)/(decaytime-risetime))*np.log(decaytime/risetime))
-        peakNormFact =  1/(-np.exp(-(tpeak-delay)/risetime)+np.exp(-(tpeak-delay)/decaytime))
-        hnew = peak*peakNormFact*(np.exp(-(t-delay)/decaytime)-np.exp(-(t-delay)/risetime))
-        hnew[hnew<0] = 0
+        hnew = alphaFunction(t,delay,risetime,peak,decaytime)
         h = h + hnew
     return(h)
+
+def alphaFunctionMultiExtract(t,params,n=100):
+    nparams = len(params)
+    nstim = int((nparams)/4)
+    if (n > nstim):
+        n = nstim
+    print(len(t),int(n))
+    y = np.zeros((len(t),int(n)),dtype=np.float)
+    for i in np.arange(0,nstim):
+        istart = i * 4
+        istart = i*4
+        delay = params[istart]
+        risetime = params[istart+1]
+        peak = params[istart+2]
+        decaytime = params[istart+3]
+        y[:,i] = alphaFunction(t,delay,risetime,peak,decaytime)
+    return(y)
+        
 
 # def alphaFunctionMulti(params):
 #     nparams = len(params)
@@ -132,8 +146,12 @@ initialparams = minbounds
 # h1 = alphaFunctionMulti(t1,initialparams)
 # params,params_covariance = optimize.curve_fit(alphaFunctionMulti,t1,y1,initialparams)
 params,params_covariance = optimize.curve_fit(alphaFunctionMulti,t1,y1,initialparams,bounds=(minbounds,maxbounds))
-h1 = alphaFunctionMulti(t1,*params)
-plt.plot(t1,h1,color='blue')
+h = alphaFunctionMulti(t1,*params)
+yy = alphaFunctionMultiExtract(t1,params)
+print(yy.shape)
+plt.plot(t1,h,color='blue')
+for i in range(0,yy.shape[1]):
+    plt.plot(t1,yy[:,i],linewidth=2)
 # h3 = alphaFunction(t1-t1[0],params[0],params[1],params[2],params[3])
 # plt.plot(t1,h3)
 plt.show()
