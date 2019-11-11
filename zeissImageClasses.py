@@ -26,6 +26,7 @@ metadata_keys = [{"name":"./Metadata/Information/Image/","tags":["PixelType","Co
 
 def background_subtraction(t,f,tpre):
     # t: time, f: raw fluorescence, tpre: time from start for background substraction
+    print(t,f,tpre)
     baseline = np.mean(f[0:np.where(t>tpre)[0][0]-1])
     return((f-baseline)/baseline)
 
@@ -85,8 +86,7 @@ def display_lineselect_image(img,channelid,x1=256,y1=0,x2=256,y2=512,linescan=[]
         # plt.show()
     return(fh,ah1)
 
-       
-            
+
 def eventtimes2events(ts,tevts):
     # function returns a vector of len(ts) with ones where events occured
     evts = np.zeros(len(ts),dtype=np.uint)
@@ -132,7 +132,7 @@ def extract_attachments(cziobj,czi):
     cziobj.attachment_image = embedded_czifile.asarray()
     cziobj.attachment_metadata =embedded_czifile.metadata()
     
-class ZeissImageClass:
+class Image:
     def __init__(self,_fname):       
         self.fname = _fname
         self.read_metadata_main(self.fname,metadata_keys) # read main metadata from the file
@@ -231,7 +231,7 @@ class ZeissImageClass:
                     self.timestamps = attachment.data()
                     if ("SizeT" in self.metadata):
                         print('SizeT: ',self.metadata['SizeT'])
-                        self.timestamps = self.timestamps[0:self.metadata['SizeT']]
+                        self.timestamps = self.timestamps[0:self.metadata['SizeT']-1]
                         
                 if attachment.attachment_entry.name == 'EventList':
                     self.attachment_names.append(attachment.attachment_entry.name)
@@ -258,22 +258,40 @@ class ZeissImageClass:
             exit
         # seperate trials/blocks and compartments from a given linescan image by finding breaks
         ts = self.timestamps
-
-        tsdiff = np.diff(ts)
-        itrials = np.where(tsdiff>1)[0] # breaks = number of timestamp sections seperated by > 1 sec
-        if (len(itrials)>0):
-            self.itrials_begin = np.concatenate((np.array([0]),itrials+1))
-            self.itrials_end = np.concatenate((itrials+1,np.array([len(ts)-1]))) # len(ts)-1 fixed the extra data point of the last trial
-        else:
-            self.itrials_begin = np.array([0])
-            self.itrials_end = np.array([len(ts)])
-
         eventtimes = self.eventtimes
         self.tevents = []
+        
+        tsdiff = np.diff(ts)
+        itrials = np.where(tsdiff>1)[0] # breaks = number of timestamp sections seperated by > 1 sec
+
+        if (len(itrials)>0):
+            # atleast two trials found!
+            self.itrials_begin = np.concatenate((np.array([1]),itrials+1))
+            self.itrials_end = np.concatenate((itrials+1,np.array([len(ts)-1]))) # len(ts)-1 fixed the extra data point of the last trial
+        else:
+            # only one trial in the file!
+            ts = ts[:-1]        # some thing strange with the timestamps when there is only one trial present
+            self.itrials_begin = np.array([1])
+            self.itrials_end = np.array([len(ts)-1])
 
         # split the eventtimes into eventtimes in each trial
         for i in np.arange(0,len(self.itrials_begin)):
-            self.tevents.append(np.array([evt for evt in eventtimes if (evt>=ts[self.itrials_begin[i]]) and (evt<=ts[self.itrials_end[i]-1])]))
+            self.tevents.append(np.array([evt for evt in eventtimes if (evt>=ts[self.itrials_begin[i]]) and (evt<=ts[self.itrials_end[i]])]))
+
+        test_tevents = []
+        for i in np.arange(0,len(self.itrials_begin)):
+            print('testing*********************')
+            print(ts,len(ts))
+            print(self.itrials_begin)
+            print(self.itrials_end)
+            print(ts[self.itrials_begin[i]],ts[self.itrials_end[i]])
+            print([evt for evt in eventtimes if (evt>=ts[self.itrials_begin[i]]) and (evt<=ts[self.itrials_end[i]])])
+        # ----------- for testing purpose only ---------
+        print('self. eventtimes: ',self.eventtimes)
+        # for i in range(0,len(test_tevents)):
+        #     print('test_tevents: ',i,' ',test_tevents[i])
+
+
         
         # Call to Linescan timeseries ROI selection object
         fh = plt.figure()
@@ -313,14 +331,13 @@ class ZeissImageClass:
             postfix = "trial"+str(itrial+1)+"roi"+str(iroi+1)
             ts = self.timestamps[itrials_begin[itrial]:itrials_end[itrial]]-self.timestamps[itrials_begin[itrial]] # ts start at 0 for each trial
             evts = eventtimes2events(ts,self.tevents[itrial]-self.timestamps[itrials_begin[itrial]])
+            print('extract _roi; ts: ',ts,' evts: ',evts)
             timename = "time_"+postfix
             stimname = "stim_"+postfix
             self.nroi[itrial] = iroi+1
             self.stimfreq[itrial]=findstimfreq(ts,evts)
             roidata[timename] = ts
             roidata[stimname] = evts
-            print(ts.shape)
-            print(evts.shape)
             if ((coord["dnTop"] != None) and (coord["dnBot"] != None)): # roi: dendrite
                 denname = "dendrite_"+postfix
                 dtop = np.uint(coord["dnTop"])
@@ -332,10 +349,10 @@ class ZeissImageClass:
                 print("Found spine ROI")
                 spinename = "spine_"+postfix
                 stop = np.uint(coord["spTop"])
-                sbot = np.uint(coord["spBot"])
+                sbot = np.uint(coord["spBot"])                
                 spi = np.mean(self.img[sbot:stop,itrials_begin[itrial]:itrials_end[itrial],1],axis=0) # XTC Note channel order: RGB
+                print("Spine ROI: ",coord['iroi'],' Trial: ',coord['itrial'], ' itrial1: ',itrials_begin[itrial],' itrial2: ',itrials_end[itrial],' stop: ',stop,' sbot: ',sbot)
                 roidata[spinename]= background_subtraction(ts,spi,ts[np.where(evts>0)[0][0]])
-                print("Spine ROI: ",coord['iroi'],' Trial: ',coord['itrial'], ' itrial1: ',itrials_begin[itrial],' itrial2: ',itrials_end[itrial],' shape: ',spi.shape)
 
         # create pandas dataframe to store rois
         print(roidata)
