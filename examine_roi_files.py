@@ -77,7 +77,7 @@ def get_ntrialsrois(roicsv):
 
 # ------------------------------------------------------------------ 
 
-roifn = '/Volumes/Anup_2TB/iglusnfr_analysis/2hz/20190415_C3_Image19Block1.csv'
+roifn = '/Volumes/Anup_2TB/iglusnfr_analysis/2hz/20190416_S2C1S1_Image85Block1.csv'
 # roifn = '/Users/macbookair/20190828_s1c1s1_Image72Block1.csv'
 # roifn = '/Users/macbookair/20190418_S1E1_Image22Block1.csv'
 
@@ -107,13 +107,13 @@ t1 = t1-t1[0]                         # time starts at t = 0
 mindelays = [(isi* i)+toffset for i in range(0,nstim)] # min delays for all the stimulai
 print(mindelays)
 minrisetimes = [0.001]*nstim
-minpeaks = [0.00001]*nstim
+minpeaks = [0.0]*nstim
 mindecaytimes = [0.01]*nstim
 # -------
-maxstimdelay = 0.01                       # max delay = 10 milliseconds
+maxstimdelay = 0.02                       # max delay = 10 milliseconds
 maxdelays = [(isi*i)+(toffset+maxstimdelay) for i in range(0,nstim)] # max delays for all the stimuli
 print(maxdelays)
-maxrisetimes = [0.05]*nstim
+maxrisetimes = [0.06]*nstim
 maxpeaks = [10]*nstim
 maxdecaytimes = [0.2]*nstim
 # -----

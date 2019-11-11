@@ -40,7 +40,7 @@ def findstimfreq(ts,evts):
     rate = np.mean(np.diff(ts[evts==1]))
     return(np.round(1/rate))
 
-def display_lineselect_image(img,channelid,x1=256,y1=0,x2=256,y2=512,linescan=[],title='',savepath=''):
+def display_lineselect_image(img,channelid,x1=0,y1=256,x2=512,y2=256,linescan=[],title='',savepath=''):
     # image a 2d numpy array, line a 1d numpy array, position [x1,y1], [x2,y2]
     # savepath  = path to save the file with name as 'title'.png
     fh = plt.figure()
@@ -231,7 +231,7 @@ class Image:
                     self.timestamps = attachment.data()
                     if ("SizeT" in self.metadata):
                         print('SizeT: ',self.metadata['SizeT'])
-                        self.timestamps = self.timestamps[0:self.metadata['SizeT']-1]
+                        self.timestamps = self.timestamps[0:self.metadata['SizeT']]
                         
                 if attachment.attachment_entry.name == 'EventList':
                     self.attachment_names.append(attachment.attachment_entry.name)
@@ -262,36 +262,53 @@ class Image:
         self.tevents = []
         
         tsdiff = np.diff(ts)
-        itrials = np.where(tsdiff>1)[0] # breaks = number of timestamp sections seperated by > 1 sec
+        self.itrials = np.where(tsdiff>1)[0] # breaks = number of timestamp sections seperated by > 1 sec
+        self.itrials_begin = np.concatenate([[0],self.itrials])
+        if (len(self.itrials)>1):
+            triallen = np.mean(np.array([len(ts[self.itrials[i]:self.itrials[i+1]]) for i in range(0,len(self.itrials)-1)]),dtype=np.int)-1
+        if(len(self.itrials)==1):
+            triallen = len(ts[0:self.itrials[0]])
+        if(len(self.itrials)==0):
+            triallen = len(ts[0:-2])
+        self.itrials_end = self.itrials_begin + triallen
 
-        if (len(itrials)>0):
-            # atleast two trials found!
-            self.itrials_begin = np.concatenate((np.array([1]),itrials+1))
-            self.itrials_end = np.concatenate((itrials+1,np.array([len(ts)-1]))) # len(ts)-1 fixed the extra data point of the last trial
-        else:
-            # only one trial in the file!
-            ts = ts[:-1]        # some thing strange with the timestamps when there is only one trial present
-            self.itrials_begin = np.array([1])
-            self.itrials_end = np.array([len(ts)-1])
+        
+        # if (len(itrials)>1):
+        #     triallen = len(ts[itrials[0]:itrials[1]])
+        #     for i in range(0,len(itrials)):
+        #         self.itrials_begin[i] = int(itrials[i]-(triallen-1))
+        #         self.itrials_end[i] = int(itrials[i]-1)
+
+        # self.itrials_begin[i+1] = int(itrials[i]-(triallen-1))
+        # self.itrials_end[i+1] = int(itrials[i]-1)
+
+        # print('self.itrials_begin: ',self.itrials_begin)
+        # print('self.itrials_end: ',self.itrials_end)
+        # print('self.itrials_end-self.itrials_begin',self.itrials_end-self.itrials_begin)
+
+
+        
+        # if (len(itrials)==2):
+        #     pass
+        #     # two trials found!
+        #     self.itrials_begin = np.concatenate((np.array([1]),itrials+1))
+        #     self.itrials_end = np.concatenate((itrials+1,np.array([len(ts)-1]))) # len(ts)-1 fixed the extra data point of the last trial
+        # if(len(itrials)>2):
+        #     #     pass
+        #     #  self.itrials_begin = np.concatenate((np.array([1]),itrials+1))
+        #     # self.itrials_end = np.concatenate((itrials+1,np.array([len(ts)-1]))) # len(ts)-1 fixed the extra data point of the last trial
+        #     self.itrials_begin = np.concatenate([np.array([0]),itrials - triallen])
+        #     self.itrials_end = np.concatenate([itrials + triallen,np.array([itrials[-1]+triallen])])
+            
+        # if(len(itrials)==0):
+        #     # only one trial in the file!
+        #     ts = ts[:-1]        # some thing strange with the timestamps when there is only one trial present
+        #     self.itrials_begin = np.array([1])
+        #     self.itrials_end = np.array([len(ts)-1])
 
         # split the eventtimes into eventtimes in each trial
         for i in np.arange(0,len(self.itrials_begin)):
             self.tevents.append(np.array([evt for evt in eventtimes if (evt>=ts[self.itrials_begin[i]]) and (evt<=ts[self.itrials_end[i]])]))
-
-        test_tevents = []
-        for i in np.arange(0,len(self.itrials_begin)):
-            print('testing*********************')
-            print(ts,len(ts))
-            print(self.itrials_begin)
-            print(self.itrials_end)
-            print(ts[self.itrials_begin[i]],ts[self.itrials_end[i]])
-            print([evt for evt in eventtimes if (evt>=ts[self.itrials_begin[i]]) and (evt<=ts[self.itrials_end[i]])])
-        # ----------- for testing purpose only ---------
-        print('self. eventtimes: ',self.eventtimes)
-        # for i in range(0,len(test_tevents)):
-        #     print('test_tevents: ',i,' ',test_tevents[i])
-
-
         
         # Call to Linescan timeseries ROI selection object
         fh = plt.figure()
@@ -330,6 +347,8 @@ class Image:
             iroi = coord["iroi"]-1
             postfix = "trial"+str(itrial+1)+"roi"+str(iroi+1)
             ts = self.timestamps[itrials_begin[itrial]:itrials_end[itrial]]-self.timestamps[itrials_begin[itrial]] # ts start at 0 for each trial
+            print('self.timestamps[itrials_begin',self.timestamps[itrials_begin[itrial]],'self.timestamps[itrials_end[itrial]]',self.timestamps[itrials_end[itrial]])
+            print('self.tevents: ',self.tevents)
             evts = eventtimes2events(ts,self.tevents[itrial]-self.timestamps[itrials_begin[itrial]])
             print('extract _roi; ts: ',ts,' evts: ',evts)
             timename = "time_"+postfix
