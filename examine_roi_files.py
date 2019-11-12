@@ -77,7 +77,7 @@ def get_ntrialsrois(roicsv):
 
 # ------------------------------------------------------------------ 
 
-roifn = '/Volumes/Anup_2TB/iglusnfr_analysis/2hz/20190416_S2C1S1_Image85Block1.csv'
+roifn = '/Volumes/Anup_2TB/iglusnfr_analysis/20hz/20190417_S2C1_Image73Block1.csv'
 # roifn = '/Users/macbookair/20190828_s1c1s1_Image72Block1.csv'
 # roifn = '/Users/macbookair/20190418_S1E1_Image22Block1.csv'
 
@@ -88,9 +88,9 @@ with open(roifn,'r') as csvfile:
 fileinfo = get_ntrialsrois(roicsv)
 
 
-t = roicsv['time_trial1roi1'].to_numpy()
-y = roicsv['spine_trial1roi1'].to_numpy()
-s = roicsv['stim_trial1roi1'].to_numpy()
+t = roicsv['time_trial1roi2'].to_numpy()
+y = roicsv['spine_trial1roi2'].to_numpy()
+s = roicsv['stim_trial1roi2'].to_numpy()
 # values to generate initial parameters for curve fit
 nstim = len(np.where(s>0)[0])   # number of stimulii
 tstim0 = t[np.where(s>0)[0][0]] # time of first stimulus
@@ -110,7 +110,7 @@ minrisetimes = [0.001]*nstim
 minpeaks = [0.0]*nstim
 mindecaytimes = [0.01]*nstim
 # -------
-maxstimdelay = 0.02                       # max delay = 10 milliseconds
+maxstimdelay = 0.005                       # max delay = 10 milliseconds
 maxdelays = [(isi*i)+(toffset+maxstimdelay) for i in range(0,nstim)] # max delays for all the stimuli
 print(maxdelays)
 maxrisetimes = [0.06]*nstim

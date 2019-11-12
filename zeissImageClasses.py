@@ -272,40 +272,6 @@ class Image:
             triallen = len(ts[0:-2])
         self.itrials_end = self.itrials_begin + triallen
 
-        
-        # if (len(itrials)>1):
-        #     triallen = len(ts[itrials[0]:itrials[1]])
-        #     for i in range(0,len(itrials)):
-        #         self.itrials_begin[i] = int(itrials[i]-(triallen-1))
-        #         self.itrials_end[i] = int(itrials[i]-1)
-
-        # self.itrials_begin[i+1] = int(itrials[i]-(triallen-1))
-        # self.itrials_end[i+1] = int(itrials[i]-1)
-
-        # print('self.itrials_begin: ',self.itrials_begin)
-        # print('self.itrials_end: ',self.itrials_end)
-        # print('self.itrials_end-self.itrials_begin',self.itrials_end-self.itrials_begin)
-
-
-        
-        # if (len(itrials)==2):
-        #     pass
-        #     # two trials found!
-        #     self.itrials_begin = np.concatenate((np.array([1]),itrials+1))
-        #     self.itrials_end = np.concatenate((itrials+1,np.array([len(ts)-1]))) # len(ts)-1 fixed the extra data point of the last trial
-        # if(len(itrials)>2):
-        #     #     pass
-        #     #  self.itrials_begin = np.concatenate((np.array([1]),itrials+1))
-        #     # self.itrials_end = np.concatenate((itrials+1,np.array([len(ts)-1]))) # len(ts)-1 fixed the extra data point of the last trial
-        #     self.itrials_begin = np.concatenate([np.array([0]),itrials - triallen])
-        #     self.itrials_end = np.concatenate([itrials + triallen,np.array([itrials[-1]+triallen])])
-            
-        # if(len(itrials)==0):
-        #     # only one trial in the file!
-        #     ts = ts[:-1]        # some thing strange with the timestamps when there is only one trial present
-        #     self.itrials_begin = np.array([1])
-        #     self.itrials_end = np.array([len(ts)-1])
-
         # split the eventtimes into eventtimes in each trial
         for i in np.arange(0,len(self.itrials_begin)):
             self.tevents.append(np.array([evt for evt in eventtimes if (evt>=ts[self.itrials_begin[i]]) and (evt<=ts[self.itrials_end[i]])]))
