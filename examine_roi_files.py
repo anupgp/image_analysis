@@ -4,7 +4,10 @@ from matplotlib import pyplot as plt
 import math
 from scipy import optimize
 from scipy.optimize import minimize
+from scipy.signal import butter, lfilter, freqz
 import re
+import copy
+
 
 def alphaFunction(t,delay,risetime,peak,decaytime):
     # alpha function for a single stimulus
@@ -15,6 +18,21 @@ def alphaFunction(t,delay,risetime,peak,decaytime):
     h[h<0] = 0
     return(h)
 
+def butter_lowpass(cutoff,fs,order=5):
+    nyq = 0.5 * fs
+    normal_cutoff   = cutoff / nyq
+    b, a = butter(order,normal_cutoff,btype = 'low', analog = False)
+    return (b,a)
+
+def butter_lowpass_filter(t,y,cutoff,order=5):
+    # compute fs: sampling frequency
+    fs = 1/np.mean(np.diff(t))
+    b, a = butter_lowpass(cutoff,fs,order = order)
+    yy = lfilter(b,a,y)
+    return(yy)
+
+
+        
 def alphaFunctionMulti(t,*args):
     nparams = len(args)
     # print(nparams)
@@ -77,7 +95,7 @@ def get_ntrialsrois(roicsv):
 
 # ------------------------------------------------------------------ 
 
-roifn = '/Volumes/Anup_2TB/iglusnfr_analysis/20hz/20190417_S2C1_Image73Block1.csv'
+roifn = '/Volumes/Anup_2TB/iglusnfr_analysis/20hz/20190801_S1C1S2_20hz_Image88.csv'
 # roifn = '/Users/macbookair/20190828_s1c1s1_Image72Block1.csv'
 # roifn = '/Users/macbookair/20190418_S1E1_Image22Block1.csv'
 
@@ -88,9 +106,9 @@ with open(roifn,'r') as csvfile:
 fileinfo = get_ntrialsrois(roicsv)
 
 
-t = roicsv['time_trial1roi2'].to_numpy()
-y = roicsv['spine_trial1roi2'].to_numpy()
-s = roicsv['stim_trial1roi2'].to_numpy()
+t = roicsv['time_trial1roi1'].to_numpy()
+y = roicsv['spine_trial1roi1'].to_numpy()
+s = roicsv['stim_trial1roi1'].to_numpy()
 # values to generate initial parameters for curve fit
 nstim = len(np.where(s>0)[0])   # number of stimulii
 tstim0 = t[np.where(s>0)[0][0]] # time of first stimulus
@@ -104,13 +122,18 @@ y1 = y[(t>tstart) & (t<tstop)]
 s1 = s[(t>tstart) & (t<tstop)]
 t1 = t1-t1[0]                         # time starts at t = 0
 # ------
+# filter data
+cutoff = 3
+y0 = butter_lowpass_filter(t1,y1,cutoff)
+y1 = y1-y0
+# ------
 mindelays = [(isi* i)+toffset for i in range(0,nstim)] # min delays for all the stimulai
 print(mindelays)
-minrisetimes = [0.001]*nstim
+minrisetimes = [0.0005]*nstim
 minpeaks = [0.0]*nstim
 mindecaytimes = [0.01]*nstim
 # -------
-maxstimdelay = 0.005                       # max delay = 10 milliseconds
+maxstimdelay = 0.02                       # max delay = 10 milliseconds
 maxdelays = [(isi*i)+(toffset+maxstimdelay) for i in range(0,nstim)] # max delays for all the stimuli
 print(maxdelays)
 maxrisetimes = [0.06]*nstim
@@ -124,7 +147,7 @@ minbounds = tuple(minbounds)
 maxbounds = tuple(maxbounds)
 initialparams = maxbounds
 # -------------
-params,params_covariance = optimize.curve_fit(alphaFunctionMulti,t1,y1,initialparams)
+# params,params_covariance = optimize.curve_fit(alphaFunctionMulti,t1,y1,initialparams)
 params,params_covariance = optimize.curve_fit(alphaFunctionMulti,t1,y1,initialparams,bounds=(minbounds,maxbounds))
 h = alphaFunctionMulti(t1,*params)
 yy = alphaFunctionMultiExtract(t1,params)
@@ -133,6 +156,7 @@ yy = alphaFunctionMultiExtract(t1,params)
 fh = plt.figure()
 ah = plt.subplot(111)
 plt.plot(t1,y1,color='black')
+plt.plot(t1,y0,color='yellow')
 plt.plot(t1,s1,color='red')
 # -------------
 plt.plot(t1,h,color='green',linewidth=2)

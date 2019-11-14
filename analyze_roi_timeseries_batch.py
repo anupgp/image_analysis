@@ -1,0 +1,227 @@
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
+import matplotlib.font_manager as font_manager
+import math
+from scipy import optimize
+from scipy.optimize import minimize
+from scipy.signal import butter, lfilter, freqz
+import re
+import copy
+
+font_path = '/Users/macbookair/.matplotlib/Fonts/Arial.ttf'
+fontprop = font_manager.FontProperties(fname=font_path,size=18)
+    
+def smooth(y,windowlen=3,window = 'hanning'):
+    s = np.concatenate([y[windowlen-1:0:-1],y,y[-2:-windowlen-1:-1]])
+    if (window == 'flat'):
+        w = np.ones(windowlen,dtype='double')
+    else:
+        w = eval('np.'+window+'(windowlen)')
+        
+    yy = np.convolve(w/w.sum(),s,mode='same')[windowlen-1:-windowlen+1]
+    return (yy)
+
+def alphaFunction(t,delay,risetime,peak,decaytime):
+    # alpha function for a single stimulus
+    # In book: Computational Modeling Methods for Neuroscientists, chapter: Modeling synapses by Arnd Roth and Mark C. W. van Rossum
+    tpeak = delay + (((decaytime*risetime)/(decaytime-risetime))*np.log(decaytime/risetime))
+    peakNormFact =  1/(-np.exp(-(tpeak-delay)/risetime)+np.exp(-(tpeak-delay)/decaytime))
+    h = peak*peakNormFact*(np.exp(-(t-delay)/decaytime)-np.exp(-(t-delay)/risetime))
+    h[h<0] = 0
+    return(h)
+
+def butter_lowpass(cutoff,fs,order=5):
+    nyq = 0.5 * fs
+    normal_cutoff   = cutoff / nyq
+    b, a = butter(order,normal_cutoff,btype = 'low', analog = False)
+    return (b,a)
+
+def butter_lowpass_filter(t,y,cutoff,order=5):
+    # compute fs: sampling frequency
+    fs = 1/np.mean(np.diff(t))
+    b, a = butter_lowpass(cutoff,fs,order = order)
+    yy = lfilter(b,a,y)
+    return(yy)
+
+        
+def alphaFunctionMulti(t,*args):
+    nparams = len(args)
+    # print(nparams)
+    nstim = int((nparams)/4)
+    h = np.zeros(len(t))
+    for i in np.arange(0,nstim):
+        istart = i*4
+        delay = args[istart]
+        risetime = args[istart+1]
+        peak = args[istart+2]
+        decaytime = args[istart+3]
+        hnew = alphaFunction(t,delay,risetime,peak,decaytime)
+        h = h + hnew
+    return(h)
+
+def alphaFunctionMultiExtract(t,params,n=100):
+    nparams = len(params)
+    nstim = int((nparams)/4)
+    if (n > nstim):
+        n = nstim
+    print(len(t),int(n))
+    y = np.zeros((len(t),int(n)),dtype=np.float)
+    for i in np.arange(0,nstim):
+        istart = i * 4
+        istart = i*4
+        delay = params[istart]
+        risetime = params[istart+1]
+        peak = params[istart+2]
+        decaytime = params[istart+3]
+        y[:,i] = alphaFunction(t,delay,risetime,peak,decaytime)
+    return(y)
+
+def get_ntrialsrois(roicsv):
+    # Get relevant information from the csv file
+    # find the number of ROI types, ROIs and trials in an roicsv file    
+    colnames = roicsv.columns
+    ispines = np.array(([[int(s) for s in re.findall(r'\d+',colname)] for colname in colnames if 'spine' in colname])) # itrial,iroi
+    idendrites = np.array(([[int(s) for s in re.findall(r'\d+',colname)] for colname in colnames if 'dendrite' in colname])) # itrial, iroi
+    ntrials1 = 0
+    ntrials2 = 0
+    nspines = 0
+    ndendrites = 0
+    if len(ispines)>0:
+        ntrials1 = max(ispines[:,0])
+        ntrials2 = ntrials1
+        nspines = max(ispines[:,1])
+        print('ispines',ispines)
+    if len(idendrites)>0:
+        ntrials2 = max(ispines[:,0])
+        ntrial1 = ntrials2
+        ndendrites = max(ispines[:,1])
+        print('idendrites',idendrites)
+    if(ntrials1 != ntrials2):
+        print('warning non-equal trials between spine and dendrite rois')
+    
+    ntrials = ntrials1 if ntrials1 < ntrials2 else ntrials2
+    ntrialsrois = {'ntrials':ntrials,'nspines':nspines,'ndendrites':ndendrites,'ispines':ispines,'idendrites':idendrites}
+    # print(ntrialsrois)
+    return(ntrialsrois)
+
+def roidata_fit(expfile,itrial,iroi,roitype):
+    # perform fit to each trial    
+    postfix = 'trial'+ str(itrial) + 'roi' + str(iroi)
+    print('itrial: ',itrial,' iroi: ', iroi, ' roitype: ',roitype)
+    tcolname = 'time_' + postfix
+    ycolname = roitype + '_' + postfix
+    scolname = 'stim_' + postfix
+    t = expfile[tcolname].to_numpy()
+    y = expfile[ycolname].to_numpy()
+    s = expfile[scolname].to_numpy()
+    # values to generate initial parameters for curve fit
+    nstim = len(np.where(s>0)[0])   # number of stimulii
+    tstim0 = t[np.where(s>0)[0][0]] # time of first stimulus
+    tstimn = t[np.where(s>0)[0][nstim-1]] # time of last stimulus
+    isi = np.round(np.mean(np.diff(t[np.where(s>0)[0]])),3) # average inter-stimulus interval
+    stimfreq = np.round(1/isi)
+    toffset = 0.1                                           # time offset before and after the stimulus
+    tstart = tstim0 - toffset                                     # add offset time before the first stimulus
+    tstop = tstimn + toffset                                      # add offser time after the last stimulus
+    t1 = t[(t>tstart) & (t<tstop)]                            # clip data
+    y1 = y[(t>tstart) & (t<tstop)]
+    s1 = s[(t>tstart) & (t<tstop)]
+    t1 = t1-t1[0]                         # time starts at t = 0
+    # ------
+    # filter data
+    cutoff = 3                  # cutoff frequency
+    y0 = butter_lowpass_filter(t1,y1,cutoff)
+    y1 = y1-y0
+    # ------
+    # smooth data
+    y1 = smooth(y1,windowlen=5,window='hamming')
+    # ------
+    mindelays = [(isi* i)+toffset for i in range(0,nstim)] # min delays for all the stimulai
+    print(mindelays)
+    minrisetimes = [0.0005]*nstim
+    minpeaks = [0.0]*nstim
+    mindecaytimes = [0.01]*nstim
+    # -------
+    maxstimdelay = 0.015                       # max delay = 10 milliseconds
+    maxdelays = [(isi*i)+(toffset+maxstimdelay) for i in range(0,nstim)] # max delays for all the stimuli
+    print(maxdelays)
+    maxrisetimes = [0.07]*nstim
+    maxpeaks = [10]*nstim
+    maxdecaytimes = [0.2]*nstim
+    # -----
+    minbounds = np.ndarray.flatten(np.transpose(np.array([mindelays,minrisetimes,minpeaks,mindecaytimes])))
+    maxbounds = np.ndarray.flatten(np.transpose(np.array([maxdelays,maxrisetimes,maxpeaks,maxdecaytimes])))
+    # initialparams = tuple((maxbounds-minbounds)/10)
+    minbounds = tuple(minbounds)
+    maxbounds = tuple(maxbounds)
+    initialparams = maxbounds
+    # -------------
+    # params,params_covariance = optimize.curve_fit(alphaFunctionMulti,t1,y1,initialparams)
+    params,params_covariance = optimize.curve_fit(alphaFunctionMulti,t1,y1,initialparams,bounds=(minbounds,maxbounds))
+
+    return(t1,y1,s1,params,params_covariance,stimfreq)
+        
+# ------------------------------------------------------------------
+
+
+batchfname = '/Volumes/Anup_2TB/iglusnfr_analysis/iglusnfr_roi_timeseries_all.csv'
+# open the csv file containing the list of roi timeseries data
+with open(batchfname,'r') as csvfile:
+    batchcsv = pd.read_csv(csvfile)
+    
+for i in range(0,len(batchcsv)):
+    expfname = batchcsv['filename'][i] # filename
+    print('opening roi timeseries file: ',expfname)
+    # open one roi timeseries file 
+    with open(expfname,'r') as csv_expfile:
+        expfile = pd.read_csv(csv_expfile)
+    expfileinfo = get_ntrialsrois(expfile)
+    print(expfileinfo)
+    # get date field from file
+    expdate = re.search('[0-9]{8,8}?',expfname)
+    if (expdate is not None):
+        print('expdate: ',expdate[0])
+    else:
+        print('Warning expdate not found!')
+        expdate = ''
+    # process spine rois
+    for itrial,iroi in expfileinfo['ispines']:
+        t1,y1,s1,params,params_covariance,stimfreq = roidata_fit(expfile,itrial,iroi,'spine')
+        h = alphaFunctionMulti(t1,*params)
+        yy = alphaFunctionMultiExtract(t1,params)        
+        # ------------------
+        # plotting
+        fh = plt.figure(figsize=(12,6))
+        ah = fh.add_axes([0.1, 0.1, 0.8, 0.8])
+        # ah.set_frame_on(False)
+        ah.spines["right"].set_visible(False)
+        ah.spines["top"].set_visible(False)
+        ah.spines["bottom"].set_linewidth(1)
+        ah.spines["left"].set_linewidth(1)
+        ah.set_xlabel('Time (s)',FontProperties=fontprop)
+        # ax.set_ylabel('Synchrony of $\mathrm{Ca^{2+}}$events',fontproperties=prop)
+        ah.set_ylabel(r'$\Delta$F/F',fontproperties=fontprop)
+        ah.tick_params(axis='both',length=6,direction='out',width=1,which='major')
+        ah.tick_params(axis='both',length=3,direction='out',width=1,which='minor')
+        # ah = plt.subplot(111)
+        figtitle = re.search('[^/]+.csv$',expfname)[0][0:-4] + ' trial: ' + str(itrial) + ' / ' + str(expfileinfo['ntrials'])
+        figtitle = figtitle + ' ROI: ' + 'Spine ' + str(iroi) + ' / ' + str(expfileinfo['nspines'])
+        figtitle = figtitle + ' stim freq: ' +  str(int(round(stimfreq)))
+        ah.set_title(figtitle,fontproperties=fontprop)
+        ah.plot(t1,y1,color='black')
+        ah.plot(t1,s1,color='red')
+        # plt.box(False)
+        # -------------
+        ah.plot(t1,h,color='green',linewidth=2)
+        colours = ['blue','purple']
+        selectcolor = 0
+        for i in range(0,yy.shape[1]):
+            ah.plot(t1,yy[:,i],linewidth=2,color=colours[selectcolor])
+            selectcolor = not selectcolor
+
+        plt.show()
+    
+        # process dendrite rois
+    
+
