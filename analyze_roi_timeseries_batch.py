@@ -8,6 +8,7 @@ from scipy.optimize import minimize
 from scipy.signal import butter, lfilter, freqz
 import re
 import copy
+import os
 
 font_path = '/Users/macbookair/.matplotlib/Fonts/Arial.ttf'
 fontprop = font_manager.FontProperties(fname=font_path,size=18)
@@ -165,13 +166,25 @@ def roidata_fit(expfile,itrial,iroi,roitype):
 # ------------------------------------------------------------------
 
 
-batchfname = '/Volumes/Anup_2TB/iglusnfr_analysis/iglusnfr_roi_timeseries_all.csv'
+datapath = '/Volumes/Anup_2TB/iglusnfr_analysis/' 
+batchfname = datapath + 'iglusnfr_roi_timeseries_all.csv'
 # open the csv file containing the list of roi timeseries data
+
+
 with open(batchfname,'r') as csvfile:
     batchcsv = pd.read_csv(csvfile)
-    
+
+# open pandas dataframe to populate data
+roidf = pd.DataFrame()
+
+
 for i in range(0,len(batchcsv)):
-    expfname = batchcsv['filename'][i] # filename
+    expfname = batchcsv['filename'][i] # complete filename with path
+    exppath = re.search('^.+/+',expfname)[0] # path to filename
+    expfname2 = re.search('[^/]+.csv$',expfname)[0][0:-4] # filename without extension
+    if(not os.path.isdir(exppath+expfname2)):
+       os.mkdir(exppath+expfname2)                           # mkdir to place all the figures for that particular file
+    figsavepath = exppath+expfname2 +'/'
     print('opening roi timeseries file: ',expfname)
     # open one roi timeseries file 
     with open(expfname,'r') as csv_expfile:
@@ -179,49 +192,68 @@ for i in range(0,len(batchcsv)):
     expfileinfo = get_ntrialsrois(expfile)
     print(expfileinfo)
     # get date field from file
-    expdate = re.search('[0-9]{8,8}?',expfname)
+    expdate = re.search('[0-9]{8,8}?',expfname)[0]
     if (expdate is not None):
         print('expdate: ',expdate[0])
     else:
         print('Warning expdate not found!')
         expdate = ''
     # process spine rois
-    for itrial,iroi in expfileinfo['ispines']:
-        t1,y1,s1,params,params_covariance,stimfreq = roidata_fit(expfile,itrial,iroi,'spine')
-        h = alphaFunctionMulti(t1,*params)
-        yy = alphaFunctionMultiExtract(t1,params)        
-        # ------------------
-        # plotting
-        fh = plt.figure(figsize=(12,6))
-        ah = fh.add_axes([0.1, 0.1, 0.8, 0.8])
-        # ah.set_frame_on(False)
-        ah.spines["right"].set_visible(False)
-        ah.spines["top"].set_visible(False)
-        ah.spines["bottom"].set_linewidth(1)
-        ah.spines["left"].set_linewidth(1)
-        ah.set_xlabel('Time (s)',FontProperties=fontprop)
-        # ax.set_ylabel('Synchrony of $\mathrm{Ca^{2+}}$events',fontproperties=prop)
-        ah.set_ylabel(r'$\Delta$F/F',fontproperties=fontprop)
-        ah.tick_params(axis='both',length=6,direction='out',width=1,which='major')
-        ah.tick_params(axis='both',length=3,direction='out',width=1,which='minor')
-        # ah = plt.subplot(111)
-        figtitle = re.search('[^/]+.csv$',expfname)[0][0:-4] + ' trial: ' + str(itrial) + ' / ' + str(expfileinfo['ntrials'])
-        figtitle = figtitle + ' ROI: ' + 'Spine ' + str(iroi) + ' / ' + str(expfileinfo['nspines'])
-        figtitle = figtitle + ' stim freq: ' +  str(int(round(stimfreq)))
-        ah.set_title(figtitle,fontproperties=fontprop)
-        ah.plot(t1,y1,color='black')
-        ah.plot(t1,s1,color='red')
-        # plt.box(False)
-        # -------------
-        ah.plot(t1,h,color='green',linewidth=2)
-        colours = ['blue','purple']
-        selectcolor = 0
-        for i in range(0,yy.shape[1]):
-            ah.plot(t1,yy[:,i],linewidth=2,color=colours[selectcolor])
-            selectcolor = not selectcolor
+    roitypes = ["spine","dendrite"]
+    for roitype in roitypes:
+        for itrial,iroi in expfileinfo['i'+roitype+'s']:
+            t1,y1,s1,params,params_covariance,stimfreq = roidata_fit(expfile,itrial,iroi,roitype)
+            h = alphaFunctionMulti(t1,*params)
+            yy = alphaFunctionMultiExtract(t1,params)
 
-        plt.show()
+            for istim in range(0,int(len(params)/4)):
+                ipstart = istim*4
+                delay = params[ipstart]
+                risetime = params[ipstart+1]
+                peak = params[ipstart+2]
+                decaytime = params[ipstart+2]
+                record = {"filename":expfname2,"date": expdate,"roitype": roitype,"iroi":iroi,"itrial":itrial,"istim":istim+1,"stimfreq":stimfreq,
+                          "delay":delay,"risetime":risetime,"peak":peak,"decaytime":decaytime}
+                print(record)
+                roidf = roidf.append(record,ignore_index = True) # append a record per stim,trial,roitype
+                # ------------------
+            # plotting
+            fh = plt.figure(figsize=(12,6))
+            ah = fh.add_axes([0.1, 0.1, 0.8, 0.8])
+            # ah.set_frame_on(False)
+            ah.spines["right"].set_visible(False)
+            ah.spines["top"].set_visible(False)
+            ah.spines["bottom"].set_linewidth(1)
+            ah.spines["left"].set_linewidth(1)
+            ah.set_xlabel('Time (s)',FontProperties=fontprop)
+            # ax.set_ylabel('Synchrony of $\mathrm{Ca^{2+}}$events',fontproperties=prop)
+            ah.set_ylabel(r'$\Delta$F/F',fontproperties=fontprop)
+            ah.tick_params(axis='both',length=6,direction='out',width=1,which='major')
+            ah.tick_params(axis='both',length=3,direction='out',width=1,which='minor')
+            # ah = plt.subplot(111)
+            figtitle = expfname2 + ' trial: ' + str(itrial) + ' / ' + str(expfileinfo['ntrials'])
+            figtitle = figtitle + ' ROI: ' + roitype + ' ' + str(iroi) + ' / ' + str(expfileinfo['n' + roitype + 's'])
+            figtitle = figtitle + ' stim freq: ' +  str(int(round(stimfreq)))
+            ah.set_title(figtitle,fontproperties=fontprop)
+            ah.plot(t1,y1,color='black')
+            ah.plot(t1,s1,color='red')
+            # plt.box(False)
+            # -------------
+            ah.plot(t1,h,color='green',linewidth=2)
+            colours = ['blue','purple']
+            selectcolor = 0
+            for i in range(0,yy.shape[1]):
+                ah.plot(t1,yy[:,i],linewidth=2,color=colours[selectcolor])
+                selectcolor = not selectcolor
+            # save the figure for a particular trial per roitype
+            figname = expfname2+'_' + roitype + str(iroi) + '_trial' + str(itrial) + '.png'
+            plt.savefig(figsavepath+figname)
+            # plt.show()
+
+    # save roidf dataframe
+    roidfname = "iglusnfr_ca1_final_analysis.csv"
+    roidf.to_csv(datapath+roidfname,index=False)
+    print(roidf)
     
-        # process dendrite rois
     
 

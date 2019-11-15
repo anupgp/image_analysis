@@ -3,8 +3,8 @@ from zeissImageClasses import compress_filename
 from matplotlib import pyplot as plt
 import h5py
 
-fnlsts = "/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190801/S1C1S2/20hz/Image 88.czi"
-fnlsls = "/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190801/S1C1S2/20hz/Image 88.czi"
+fnlsts = "/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190801/S1C1S2/20hz/Image 89.czi"
+fnlsls = "/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190801/S1C1S2/20hz/Image 89.czi"
 datasavepath = '/Volumes/Anup_2TB/iglusnfr_analysis/20hz'
 
 zfilelsts = zeiss.Image(fnlsts)
