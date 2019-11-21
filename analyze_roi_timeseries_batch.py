@@ -167,7 +167,7 @@ def roidata_fit(expfile,itrial,iroi,roitype):
 
 
 datapath = '/Volumes/Anup_2TB/iglusnfr_analysis/' 
-batchfname = datapath + 'iglusnfr_roi_timeseries_all.csv'
+batchfname = datapath + 'iglusnfr_roi_timeseries_filenames_allV2.csv'
 # open the csv file containing the list of roi timeseries data
 
 
@@ -251,7 +251,7 @@ for i in range(0,len(batchcsv)):
             # plt.show()
 
     # save roidf dataframe
-    roidfname = "iglusnfr_ca1_final_analysis.csv"
+    roidfname = "iglusnfr_ca1_final_analysisV2.csv"
     roidf.to_csv(datapath+roidfname,index=False)
     print(roidf)
     
