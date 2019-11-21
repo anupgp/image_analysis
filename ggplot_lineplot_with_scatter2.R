@@ -4,21 +4,32 @@ roiidspines = unique(roidf[roidf$roitype == "spine","roiid"])
 ## omit roiid[5]: 20190417_S2C1_spine_1: not enough data
 roiidomit = c("20190417_S2C1_spine_1","20190726_S1C1S1_spine_2","20190801_S1C1S2_spine_1")
 roiidselect = roiidspines[!roiidspines %in% roiidomit]
-stimfreq = 8
+stimfreq = 20
 trial = 1                               #pr and potency is same for all trials
-param = "potency"
+param = "npr"
 columns = c("roiid","trial","istim",param)
 plotdata = roidf[roidf$stimfreq==stimfreq & roidf$roitype == "spine" & roidf$roiid %in% roiidselect & roidf$trial == trial,]
 plotdata = plotdata[,columns]                           #reduce plotdata columns
 colnames(plotdata) = c(colnames(plotdata)[1:3],"param") #rename parameter column name to "param"
+## create a dataframe for average and sem
+plotavgsem = ddply(plotdata,.(istim),function(x){
+    avg = mean(x$param,na.rm = TRUE);
+    std = sd(x$param,na.rm = TRUE);
+    nsamples = length(x$param);
+    sem = std/sqrt(nsamples);
+    print(length(x$param));
+    dfout = as.data.frame(cbind(avg = avg,std = std,n = nsamples, sem = sem));
+    return(dfout)})
+## -----------
 plotsavepath = "/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/plots/"
 plotsavepath = paste(c(plotsavepath,param,"_vs_stim_",toString(stimfreq),"Hz.png"),collapse = "")
-## -----------
 png(plotsavepath,width=20,height=10,units="cm",bg="white",res=300)
 p <- ggplot(plotdata, aes(x=istim,y=param,fill=roiid))
-p <- p + geom_line(stat = 'summary', fun.y = 'mean', size = 1,show.legend=FALSE,color = 'grey')
-p <- p + geom_point(aes(x=istim,y=param,fill=roiid),shape=21,size=3,show.legend=FALSE)
-## p <- p + geom_errorbar(stat = 'summary', fun.data = 'mean_se', width = 0, size = 1, color='black');
+## p <- p + geom_line(stat = 'summary', fun.y = 'mean', size = 1,show.legend=FALSE,color = 'grey')
+p <- p + geom_line(aes(x=istim,y=param), size = 1,show.legend=FALSE,color = 'grey')
+p <- p + geom_line(data = plotavgsem,aes(x=istim,y=avg),inherit.aes = FALSE, size = 1,show.legend=FALSE)
+p <- p + geom_point(data = plotdata,aes(x=istim,y=param,fill=roiid),shape=21,size=3,show.legend=FALSE)
+p <- p + geom_errorbar(data = plotavgsem, inherit.aes = FALSE,aes(x=istim,ymin = avg-sem,ymax = avg+sem),width = 0, size = 1, color='black');
 p <- p + labs(title=paste(c(toString(stimfreq),"Hz"),collapse=""))
 p <- p + scale_x_continuous(name ="Stimulus number", breaks = c(1,2,3,4,5,6,7,8),labels=c("1","2","3","4","5","6","7","8"),limits=c(1,8))
 if (param == "potency"){
