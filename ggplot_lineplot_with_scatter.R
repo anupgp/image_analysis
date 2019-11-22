@@ -2,8 +2,8 @@ source("/Users/macbookair/goofy/codes/image_analysis/iglusnfr_roidf_analysis.R")
 ## plotting average and sem with scatter plot
 roiidspines = unique(roidf[roidf$roitype == "spine","roiid"])
 ## omit roiid[5]: 20190417_S2C1_spine_1: not enough data
-roiidspine = toString(roiidspines[6])
-stimfreq = 2
+roiidspine = toString(roiidspines[8])
+stimfreq = 20
 param = "peak2"
 columns = c("roiid","trial","istim",param)
 plotdata = roidf[roidf$stimfreq==stimfreq & roidf$roitype == "spine" & roidf$roiid == roiidspine,]
