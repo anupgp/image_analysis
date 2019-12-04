@@ -119,6 +119,7 @@ def show_metadata(metadata):
     # print metadata keys and values
     for key in metadata:
         print(key,metadata[key])
+        
 
 def extract_attachments(cziobj,czi):
     embedded_czifile = czifile.CziFile(
@@ -194,7 +195,20 @@ class Image:
             if(sizeX>0 and sizeY > 0 and sizeT >0):
                 # Found framescan timeseries
                 self.img_type = "framescan timeseries"
-            
+            if(sizeX>0 and sizeY > 0 and sizeZ >0 and sizeT ==0):
+                # Found framescan z-stack
+                self.img_type = "*** framescan z-stack ***"
+                self.img_type = "framescan z-stack" # BVCTZYX0' -> CZYX
+                self.img = self.img_raw[0,0,:,0,:,:,:,0]
+                # reduce pixel data format to 8 bits
+                if (bitsize>8):
+                    self.img = np.uint8((self.img/(pow(2,bitsize)-1))*(pow(2,8)-1))
+                # reorder dimensions: XYZC
+                self.img = np.transpose(self.img)
+                # Zeiss puts channel one as Green, then Red so, swap them again
+                self.img = np.flip(self.img,-1)
+                # add missing channels for RGB image
+                self.img = np.concatenate([self.img[:,:,:,:],np.zeros((sizeX,sizeY,sizeZ,3-sizeC),dtype=np.uint8)],axis=-1)
     def read_attachments(self):
         with czifile.CziFile(self.fname) as czi:
             self.attachment_names = []
@@ -237,14 +251,40 @@ class Image:
                     self.attachment_names.append(attachment.attachment_entry.name)
                     # self.event = {'time':0,'type':'','name':''}
                     self.events = []
+                    alleventnames = attachment.data()[0].EV_TYPE.values()
+                    
                     for item in attachment.data():
-                        self.events.append({'time':item.time,'type':item.EV_TYPE[item.event_type],'name':item.description})
-                    self.eventtimes = [item['time'] for item in self.events]
+                        print(item.time)
+                        print(item.description)
+                        print(item.event_type)
+                        print(item.EV_TYPE)
+                        self.events.append({'time':item.time,'type':item.event_type,'name':item.description})
+                        self.eventtimes = [item['time'] for item in self.events]
 
     def set_data_attributes(self):
         # set main data type and attachments in the file: framescan, linescan
         pass
-                    
+
+    def z_projection_2dmax(self):
+        maxproj = self.img.max(axis=-2)
+        # maxproj = maxproj.max(axis=-1)
+        # display the maximum projected framescan image
+        fh = plt.figure()
+        ah = plt.subplot(111)
+        ah.imshow(maxproj)
+        # add scale bar
+        scaleX = self.metadata['ScalingX']
+        sizeX = self.metadata['SizeX']
+        barX = np.round(100E-6/scaleX)
+        offsetX = 10
+        offsetY = 10
+        scalebarX = np.arange(sizeX-barX-offsetX,sizeX-offsetX)
+        print(scalebarX)
+        ah.plot(scalebarX,np.ones(len(scalebarX))*offsetY,color="black",linewidth=2)
+        ah.text(sizeX-offsetX-round(barX/1.5),offsetY+20,"100")
+        plt.axis('off')
+        plt.show()
+        
     def select_roi_linescan(self):
         # Class method to select roi on a linescan time series image from Zeiss LSM microscope
         if(not self.img_type == "linescan timeseries"):
@@ -259,7 +299,7 @@ class Image:
         # seperate trials/blocks and compartments from a given linescan image by finding breaks
         ts = self.timestamps
         eventtimes = self.eventtimes
-        self.tevents = []
+
         
         tsdiff = np.diff(ts)
         self.itrials = np.where(tsdiff>1)[0] # breaks = number of timestamp sections seperated by > 1 sec
@@ -273,8 +313,20 @@ class Image:
         self.itrials_end = self.itrials_begin + triallen
 
         # split the eventtimes into eventtimes in each trial
+        # convert event times to events
+        self.tevents = []
+        self.events = []
         for i in np.arange(0,len(self.itrials_begin)):
-            self.tevents.append(np.array([evt for evt in eventtimes if (evt>=ts[self.itrials_begin[i]]) and (evt<=ts[self.itrials_end[i]])]))
+
+            tevents = np.array([evt for evt in eventtimes if (evt>=ts[self.itrials_begin[i]]) and (evt<=ts[self.itrials_end[i]])])
+            self.tevents.append(tevents)
+            events = eventtimes2events(ts[self.itrials_begin[i]:self.itrials_end[i]],tevents)
+            self.events.append(events)
+
+
+
+        # convert eventtimes to events
+        
         
         # Call to Linescan timeseries ROI selection object
         fh = plt.figure()
@@ -283,7 +335,21 @@ class Image:
         # lsts = copy.deepcopy(self.img)
         # ah.imshow(self.img,origin="lower",aspect='equal',interpolation='nearest')
         # plt.show()
-        roiselect = roilinescan_class.roiLineScanClass(fh,ah,self.img,self.itrials_begin,self.itrials_end)
+        
+        roiselect = roilinescan_class.roiLineScanClass(fh,ah,self.img,self.itrials_begin,self.itrials_end,self.events)
+
+
+            # itrial = coord["itrial"]-1
+            # iroi = coord["iroi"]-1
+            # postfix = "trial"+str(itrial+1)+"roi"+str(iroi+1)
+            # ts = self.timestamps[itrials_begin[itrial]:itrials_end[itrial]]-self.timestamps[itrials_begin[itrial]] # ts start at 0 for each trial
+            # print('self.timestamps[itrials_begin',self.timestamps[itrials_begin[itrial]],'self.timestamps[itrials_end[itrial]]',self.timestamps[itrials_end[itrial]])
+            # print('self.tevents: ',self.tevents)
+            # evts = eventtimes2events(ts,self.tevents[itrial]-self.timestamps[itrials_begin[itrial]])
+
+
+
+        
         self.coords = roiselect.coords
         print('coords: ',self.coords)
 
@@ -328,7 +394,10 @@ class Image:
                 dtop = np.uint(coord["dnTop"])
                 dbot = np.uint(coord["dnBot"])
                 den = np.mean(self.img[dbot:dtop,itrials_begin[itrial]:itrials_end[itrial],1],axis=0) # XTC Note channel order: RGB
-                roidata[denname]= background_subtraction(ts,den,ts[np.where(evts>0)[0][0]])
+                # with background substraction (delta F/F)
+                # roidata[denname]= background_subtraction(ts,den,ts[np.where(evts>0)[0][0]])
+                # no background substration
+                roidata[denname] = den
                 print("dendrite ROI: ",coord['iroi'],' Trial: ',coord['itrial'], ' itrial1: ',itrials_begin[itrial],' itrial2: ',itrials_end[itrial],' shape: ',den.shape)
             if ((coord["spTop"] != None) and (coord["spBot"] != None)): # roi: spine
                 print("Found spine ROI")
@@ -337,8 +406,10 @@ class Image:
                 sbot = np.uint(coord["spBot"])                
                 spi = np.mean(self.img[sbot:stop,itrials_begin[itrial]:itrials_end[itrial],1],axis=0) # XTC Note channel order: RGB
                 print("Spine ROI: ",coord['iroi'],' Trial: ',coord['itrial'], ' itrial1: ',itrials_begin[itrial],' itrial2: ',itrials_end[itrial],' stop: ',stop,' sbot: ',sbot)
-                roidata[spinename]= background_subtraction(ts,spi,ts[np.where(evts>0)[0][0]])
-
+                # background substraction (delta F/F)
+                # roidata[spinename]= background_subtraction(ts,spi,ts[np.where(evts>0)[0][0]])
+                # No background substration
+                roidata[spinename] = spi
         # create pandas dataframe to store rois
         print(roidata)
         self.roidf = pd.DataFrame(roidata)

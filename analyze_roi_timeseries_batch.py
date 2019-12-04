@@ -5,7 +5,7 @@ import matplotlib.font_manager as font_manager
 import math
 from scipy import optimize
 from scipy.optimize import minimize
-from scipy.signal import butter, lfilter, freqz
+from scipy.signal import butter, lfilter, freqz, detrend
 import re
 import copy
 import os
@@ -129,7 +129,10 @@ def roidata_fit(expfile,itrial,iroi,roitype):
     y1 = y[(t>tstart) & (t<tstop)]
     s1 = s[(t>tstart) & (t<tstop)]
     t1 = t1-t1[0]                         # time starts at t = 0
-    # ------
+    # --------
+    # detrend data
+    y1 = detrend(y1,type="linear")
+    # ---------
     # filter data
     cutoff = 3                  # cutoff frequency
     y0 = butter_lowpass_filter(t1,y1,cutoff)
@@ -166,8 +169,10 @@ def roidata_fit(expfile,itrial,iroi,roitype):
 # ------------------------------------------------------------------
 
 
-datapath = '/Volumes/Anup_2TB/iglusnfr_analysis/' 
-batchfname = datapath + 'iglusnfr_roi_timeseries_filenames_allV2.csv'
+# datapath = '/Volumes/Anup_2TB/iglusnfr_analysis/'
+datapath = '/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/' 
+batchfname = datapath + 'test20hz.csv'
+# batchfname = datapath + 'iglusnfr_roi_timeseries_filenames_allV3.csv'
 # open the csv file containing the list of roi timeseries data
 
 
@@ -182,9 +187,9 @@ for i in range(0,len(batchcsv)):
     expfname = batchcsv['filename'][i] # complete filename with path
     exppath = re.search('^.+/+',expfname)[0] # path to filename
     expfname2 = re.search('[^/]+.csv$',expfname)[0][0:-4] # filename without extension
-    if(not os.path.isdir(exppath+expfname2)):
-       os.mkdir(exppath+expfname2)                           # mkdir to place all the figures for that particular file
-    figsavepath = exppath+expfname2 +'/'
+    if(not os.path.isdir(exppath+"test20hz/"+expfname2)):
+       os.mkdir(exppath+"test20hz/"+expfname2)                           # mkdir to place all the figures for that particular file
+    figsavepath = exppath+"test20hz/"+expfname2 +'/'
     print('opening roi timeseries file: ',expfname)
     # open one roi timeseries file 
     with open(expfname,'r') as csv_expfile:
@@ -242,18 +247,20 @@ for i in range(0,len(batchcsv)):
             ah.plot(t1,h,color='green',linewidth=2)
             colours = ['blue','purple']
             selectcolor = 0
-            for i in range(0,yy.shape[1]):
-                ah.plot(t1,yy[:,i],linewidth=2,color=colours[selectcolor])
+            for j in range(0,yy.shape[1]):
+                ah.plot(t1,yy[:,j],linewidth=2,color=colours[selectcolor])
                 selectcolor = not selectcolor
             # save the figure for a particular trial per roitype
             figname = expfname2+'_' + roitype + str(iroi) + '_trial' + str(itrial) + '.png'
             plt.savefig(figsavepath+figname)
+            plt.close(fh)
             # plt.show()
 
     # save roidf dataframe
-    roidfname = "iglusnfr_ca1_final_analysisV2.csv"
-    roidf.to_csv(datapath+roidfname,index=False)
-    print(roidf)
+# roidfname = "iglusnfr_ca1_final_analysisV3.csv"
+# roidfname = "test_roidf.csv"
+# roidf.to_csv(datapath+roidfname,index=False)
+print(roidf)
     
     
 

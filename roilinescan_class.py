@@ -1,13 +1,15 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import copy
+import cv2
 
 class roiLineScanClass:
-    def __init__(self,_fh,_ah,_lsts,_ifirst,_ilast): # A linescan timeseries matrix is iterated over trials for ROIs selection
+    def __init__(self,_fh,_ah,_lsts,_ifirst,_ilast,_events): # A linescan timeseries matrix is iterated over trials for ROIs selection
         self.fig = _fh
         self.lsts = _lsts
         self.ifirst = _ifirst
         self.ilast = _ilast
+        self.events = _events
         self.roicount = 0
         self.axis = _ah
         self.roi_initialize()
@@ -32,15 +34,20 @@ class roiLineScanClass:
         self.xyBsp = [None,None]
         self.itrial = 1         # index start at 0
         self.title = 'Trial: '+str(self.itrial)
-        lsts0 = self.lsts[:,self.ifirst[self.itrial-1]:self.ilast[self.itrial-1]]
+        self.lsts0 = self.lsts[:,self.ifirst[self.itrial-1]:self.ilast[self.itrial-1]]
+        self.events0 = self.events[self.itrial-1]
+        print(self.events)
         # print(self.lsts)
-        # self.ih = self.axis.imshow(lsts0,interpolation='nearest',cmap='jet',origin='lower',aspect='equal')
-        self.ih = self.axis.imshow(lsts0,interpolation='nearest',origin='lower',aspect='equal')
+        # display linescan timeseries
+        self.ih = self.axis.imshow(self.lsts0[:,:,1],interpolation='nearest',cmap='jet',origin='lower',aspect='equal')
+        # self.ih = self.axis.imshow(lsts0,interpolation='nearest',origin='lower',aspect='equal')
+        # display events
+        self.ph = self.axis.plot(np.arange(0,np.size(self.lsts0,1)),self.events0*np.size(self.lsts0,0),color="red",linewidth=1)
         self.lineTdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTdn[1],self.xyTdn[1]],color='blue',linewidth=2)
         self.lineBdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyBdn[1],self.xyBdn[1]],color='red',linewidth=2)
         self.lineTsp, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTsp[1],self.xyTsp[1]],color='yellow',linewidth=2,linestyle='-')
         self.lineBsp, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyBsp[1],self.xyBsp[1]],color='green',linewidth=2,linestyle='-')
-        self.show_help()
+        # self.show_help()
         
     def clear_roi(self):
         self.xyTdn = [None,None]
@@ -69,7 +76,7 @@ class roiLineScanClass:
                           r'N: Move to next trial'))
         # these are matplotlib.patch.Patch properties
         props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-        self.axis.text(0.05,1.5,textstr,transform=self.axis.transAxes,fontsize=12,verticalalignment='top',bbox=props)
+        self.axis.text(0.05,1.5,textstr,transform=self.axis.transAxes,fontsize=12,verticalalignment='center',bbox=props)
         
     def action_switcher(self,key):
         switcher = {
@@ -148,8 +155,10 @@ class roiLineScanClass:
             self.title = 'Trial: ' + str(self.itrial)
             self.titledisplay.set_text(self.title)
             self.titledisplay.figure.canvas.draw()
-            lsts0 = self.lsts[:,self.ifirst[self.itrial-1]:self.ilast[self.itrial-1]] # itrial start at index 1
-            self.ih.set_data(lsts0)
+            self.lsts0 = self.lsts[:,self.ifirst[self.itrial-1]:self.ilast[self.itrial-1]] # itrial start at index 1
+            self.ih.set_data(self.lsts0[:,:,1]) # pass only one channel
+            self.events0 = self.events[self.itrial-1]
+            self.ph.set_data(self.events0)
             self.fig.canvas.draw_idle()
     
     def add_roi(self):
