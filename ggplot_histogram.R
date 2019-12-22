@@ -18,8 +18,9 @@ if (stimfreq == 20){
 }
 ## -------
 roiid = roiidselect[5]
-param = "peak2"
-plotdata = roidf[roidf$stimfreq==stimfreq & roidf$roiid %in% roiid & roidf$istim >=1,]
+param = "peak"
+## plotdata = roidf[roidf$stimfreq>=stimfreq & roidf$roiid %in% roiid & roidf$istim ==1 & roidf$ipeak == TRUE,]
+plotdata = roidf[roidf$stimfreq>=stimfreq & roidf$istim ==1 & roidf$ipeak == TRUE,]
 plotdata = plotdata[,c("roiid","trial","istim",param)]
 colnames(plotdata) = c(colnames(plotdata)[1:3],"param") #rename parameter column name to "param"
 minval = min(plotdata$param,na.rm = TRUE)

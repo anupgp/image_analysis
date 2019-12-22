@@ -16,9 +16,11 @@ roiidspines2 = c(
     "20190801_S1C1S2_spine_1")          # 20190801_S1C1S2_spine_1 - discarded
 roiidspine = toString(roiidspines[8])
 stimfreq = 20
-param = "peak2"
+param = "peak"
 columns = c("roiid","trial","istim",param)
-plotdata = roidf[roidf$stimfreq==stimfreq & roidf$roitype == "spine" & roidf$roiid == roiidspine,]
+## plotdata = roidf[roidf$stimfreq==stimfreq & roidf$roitype == "spine" & roidf$isuccess == TRUE & roidf$iselect ==TRUE,]
+plotdata = roidf[roidf$stimfreq==stimfreq & roidf$roitype == "spine" & roidf$roiid == roiidspine & roidf$isuccess ==TRUE,]
+## plotdata = roidf[roidf$stimfreq==stimfreq & roidf$roitype == "spine" & roidf$roiid == roiidspine,]
 ntrials = round(mean(plotdata$ntrials),2)
 plotdata = plotdata[,columns]                           #reduce plotdata columns
 colnames(plotdata) = c(colnames(plotdata)[1:3],"param") #rename parameter column name to "param"
@@ -26,7 +28,7 @@ if (param %in% c("risetime2","decaytime2"))
     {plotdata$param = plotdata$param*1000                    # change time units to msec
  }
 plotsavepath = "/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/plots/"
-plotsavepath = paste(c(plotsavepath,param,"_vs_stim_",toString(roiidspine),"_",toString(stimfreq),"Hz.png"),collapse = "")
+## plotsavepath = paste(c(plotsavepath,param,"_vs_stim_",toString(roiidspine),"_",toString(stimfreq),"Hz.png"),collapse = "")
 ## png(plotsavepath,width=20,height=10,units="cm",bg="white",res=300)
 p <- ggplot(plotdata, aes(x=istim,y=param,fill=roiid))
 p <- p + geom_point(aes(x=istim,y=param,fill=roiid),shape=21,size=3,show.legend=FALSE)

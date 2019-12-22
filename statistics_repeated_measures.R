@@ -17,6 +17,6 @@ if (stimfreq == 20){
 trial = 1                               #pr and potency is same for all trials
 param = "potency"
 columns = c("roiid","trial","istim",param)
-plotdata = roidf[roidf$stimfreq==stimfreq & roidf$roitype == "spine" & roidf$roiid %in% roiidselect & roidf$trial == trial,]
+statdata = roidf[roidf$stimfreq==stimfreq & roidf$roitype == "spine" & roidf$roiid %in% roiidselect & roidf$trial == trial,]
 plotdata = plotdata[,columns]                           #reduce plotdata columns
 colnames(plotdata) = c(colnames(plotdata)[1:3],"param") #rename parameter column name to "param"

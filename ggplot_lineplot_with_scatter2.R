@@ -86,3 +86,4 @@ a2 = anova(baselinemodel,istimmodel)
 posthoc = glht(istimmodel,linfact = mcp(istim_factor= "Tukey"))
 summary(posthoc)
 
+

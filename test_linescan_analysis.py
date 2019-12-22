@@ -12,7 +12,7 @@ fnlsts = "/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190417/S2C1/Image
 fnlsls = "/Volumes/Anup_2TB/raw_data/beiquelab/zen/data_anup/20190417/S2C1/Image 86.czi"
 datasavepath = '/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/2hz'
 # datasavepath = '/Volumes/Anup_2TB/iglusnfr_analysis/2hz'
-fnamedepth = 3
+ fnamedepth = 3
 zfilelsts = zeiss.Image(fnlsts)
 zfilelsls = zeiss.Image(fnlsls)
 # print(zfile.img_type)

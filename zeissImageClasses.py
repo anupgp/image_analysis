@@ -2,6 +2,7 @@ import czifile
 from io import BytesIO
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import gridspec
 import common_functions as comfun
 import copy
 import roilinescan_class
@@ -265,13 +266,14 @@ class Image:
         # set main data type and attachments in the file: framescan, linescan
         pass
 
-    def z_projection_2dmax(self):
-        maxproj = self.img.max(axis=-2)
-        # maxproj = maxproj.max(axis=-1)
+    def z_projection_2dmax(self,title=[],savepath=[]):
         # display the maximum projected framescan image
-        fh = plt.figure()
-        ah = plt.subplot(111)
-        ah.imshow(maxproj)
+        maxprojz = self.img.max(axis=-2) # maxmimum projection along Z
+        maxprojy = self.img.max(axis=1) # maxmimum projection along Z
+        maxprojy = np.flip(maxprojy,1)
+        maxprojx = self.img.max(axis=0) # maxmimum projection along Z
+        maxprojx = np.swapaxes(maxprojx,0,1)
+        maxprojx = np.flip(maxprojx,0)
         # add scale bar
         scaleX = self.metadata['ScalingX']
         sizeX = self.metadata['SizeX']
@@ -279,11 +281,31 @@ class Image:
         offsetX = 10
         offsetY = 10
         scalebarX = np.arange(sizeX-barX-offsetX,sizeX-offsetX)
-        print(scalebarX)
+        fh = plt.figure(figsize=(8,8),constrained_layout=True)
+        widths = [5,1.5]
+        heights = [5,1.5]
+        gsh = fh.add_gridspec(ncols=2,nrows=2,width_ratios=widths,height_ratios=heights)
+        gsh.update(wspace=0.01,hspace=0.01)
+        ah = fh.add_subplot(gsh[0,0])
         ah.plot(scalebarX,np.ones(len(scalebarX))*offsetY,color="black",linewidth=2)
-        ah.text(sizeX-offsetX-round(barX/1.5),offsetY+20,"100")
-        plt.axis('off')
-        plt.show()
+        ah.text(sizeX-offsetX-round(barX/1.5),offsetY+20,r"$100\ \mu m$",)
+        ah.axis('off')
+        ah.imshow(maxprojz)
+        ah = fh.add_subplot(gsh[0,1])
+        ah.imshow(maxprojy)
+        ah.axis('off')
+        ah = fh.add_subplot(gsh[1,0])
+        ah.imshow(maxprojx)
+        ah.plot(scalebarX,np.ones(len(scalebarX))*offsetY,color="black",linewidth=2)
+        ah.text(sizeX-offsetX-round(barX/1.5),offsetY+20,r"$100\ \mu m$",)
+        ah.axis('off')
+        if (path.isdir(savepath) and len(title)>0):
+            print('Path to save found!')
+            print('Saving as:', savepath+'/'+title+'.png')
+            plt.savefig(savepath+'/'+title+'.png')
+        else:
+            print('Path to save or title not found!')
+            plt.show()
         
     def select_roi_linescan(self):
         # Class method to select roi on a linescan time series image from Zeiss LSM microscope
