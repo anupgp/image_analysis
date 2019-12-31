@@ -75,7 +75,7 @@ for i in np.arange(0,tsuccess.shape[1]):
     cutoff = 490                  # cutoff frequency
     y0 = butter_lowpass_filter(t,y,cutoff)
     # smooth data
-    y1 = smooth(y,windowlen=3,window='hamming')
+    y1 = smooth(y,windowlen=,window='hamming')
     
     ph3.set_xdata(t)
     ph3.set_ydata(y0)

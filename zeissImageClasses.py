@@ -83,7 +83,7 @@ def display_lineselect_image(img,channelid,x1=0,y1=256,x2=512,y2=256,linescan=[]
         print('Saving as:', savepath+'/'+title+'.png')
         plt.savefig(savepath+'/'+title+'.png')
     else:
-        print('Path to save or title not found!')
+        print('Path to save or title not found! Image not saved!')
         # plt.show()
     return(fh,ah1)
 
@@ -222,6 +222,12 @@ class Image:
                     imageattachment = czifile.CziFile(BytesIO(attachment.data(raw=True)))
                     self.attachimage_raw = imageattachment.asarray()
                     self.attachimage_metadata = metadata_xmlstr_to_metadata_dict(imageattachment.metadata(),metadata_keys)
+                    # check if image has 'X1','Y1','X2','Y2' metadata
+                    keys = ['X1','Y1','X2','Y2']
+                    values = [0,256,512,256]
+                    for key,value in zip(keys,values):
+                        if (not key in self.attachimage_metadata.keys()):
+                            self.attachimage_metadata[key] = value
                     # modify image for display
                     sizeX = self.attachimage_metadata['SizeX']
                     sizeY = self.attachimage_metadata['SizeY']
@@ -252,13 +258,11 @@ class Image:
                     self.attachment_names.append(attachment.attachment_entry.name)
                     # self.event = {'time':0,'type':'','name':''}
                     self.events = []
-                    alleventnames = attachment.data()[0].EV_TYPE.values()
-                    
                     for item in attachment.data():
-                        print(item.time)
-                        print(item.description)
-                        print(item.event_type)
-                        print(item.EV_TYPE)
+                        # print(item.time)
+                        # print(item.description)
+                        # print(item.event_type)
+                        # print(item.EV_TYPE)
                         self.events.append({'time':item.time,'type':item.event_type,'name':item.description})
                         self.eventtimes = [item['time'] for item in self.events]
 
