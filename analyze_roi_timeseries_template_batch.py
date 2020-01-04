@@ -107,69 +107,75 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01):
     # create arrays to hold the new trace obtained through template match
     ft = np.zeros((len(t),1))
     ft[:,0] = t
+    dct = np.zeros((len(t),1))
+    dct[:,0] = t
     fy = np.zeros((len(t),1))
+    dcy = np.zeros((len(t),1))
     lags = np.zeros(len(istims_begin))
-    betas = np.zeros(len(istims_begin))
+    tpeaks = np.zeros(len(istims_begin))
+    ypeaks = np.zeros(len(istims_begin))
     # ---------------------
     for i in np.arange(0,len(istims_begin)):
-        t1  = t[istims_begin[i]:istims_end[i]]
-        t10 = t1[0]
-        t1 = t1 - t1[0]
-        y1  = y[istims_begin[i]:istims_end[i]]
+        tres  = t[istims_begin[i]:istims_end[i]]
+        tres = tres - t[istims_begin[i]]
+        yres  = y[istims_begin[i]:istims_end[i]]
         # -----------
         # find last search time delay
-        itmaxlag = np.where(t1>tmaxlag)[0][0]-1
+        itmaxlag = np.where(tres>tmaxlag)[0][0]-1
         # normalize template so that the correlation is amplitude independent
-        yy2 = (yy - np.mean(yy))/np.std(yy)
+        yynormlong = (yy - np.mean(yy))/np.std(yy)
         # find the minimum of actual and template trace
-        minlen = min(len(y1),len(yy2))
+        minlen = min(len(yres),len(yynormlong))
         # crop the template to the minimum length
-        yy2 = yy2[0:minlen-itmaxlag]
+        yynorm = yynormlong[0:minlen-itmaxlag]
         # array to hold the correlations at different time lags
         c = np.zeros(itmaxlag)
         # print(itlaglast,len(avgy2),len(y1))
         # -----------------------------
         for j in np.arange(0,itmaxlag):
             # select a portion of actual trace to correlate with the template trace
-            y2 = y1[j:(minlen-itmaxlag+j)]
+            yshift = yres[j:(minlen-itmaxlag+j)]
             # normalize the actual trace
-            y3 = (y2 - np.mean(y2))/np.std(y2)
+            ynorm = (yshift - np.mean(yres))/np.std(yres)
             # reshape the actual trace to a column vector
-            y3  = y3.reshape((len(y3),1))
-            print(j,yy2.shape,y3.shape)
+            ynorm  = ynorm.reshape((len(ynorm),1))
             # perform correlation between the actual trace and the template
-            c[j] = np.correlate(y3[:,0],yy2[:,0])
+            c[j] = np.correlate(ynorm[:,0],yynorm[:,0])
         # --------------------
         # get the index at which the correlation is maximum
         icmax = np.where(c>=np.max(c))[0][0]
         # shift y1 to max correlation
-        y2 = y1[icmax:minlen - itmaxlag + icmax]
+        yshift = yres[icmax:minlen - itmaxlag + icmax]
         # reshape actual trace to a column vector
-        y2 = y2.reshape((len(y2),1))
+        yshift = yshift.reshape((len(yshift),1))
         # crop the time of actual trace for the max correlation lag
-        t2 = t1[icmax:minlen - itmaxlag + icmax]
+        tshift = t[icmax:minlen - itmaxlag + icmax]
         # rehape time of actual trace to a column vector
-        t2 = t2.reshape((len(y2),1))
+        tshift = tshift.reshape((len(yshift),1))
         # create a new template trace by adding the original template and portion of the actual trace 
-        yy3 = fy[istims_begin[i]+icmax:istims_begin[i]+icmax+y2.shape[0],0] + yy[0:y2.shape[0],0]
-        yy3 = yy3.reshape((yy3.shape[0],1))
+        yysolve = fy[istims_begin[i]+icmax:istims_begin[i]+icmax+yshift.shape[0],0] + yy[0:yshift.shape[0],0]
+        yysolve = yysolve.reshape((yysolve.shape[0],1))
         # solve normal equation to estimate beta
-        beta  = np.linalg.pinv(yy3.dot(yy3.T)).dot(yy3).T.dot(y2)
+        beta  = np.linalg.pinv(yysolve.dot(yysolve.T)).dot(yysolve).T.dot(yshift)
         print(beta)
         id1 = istims_begin[i]+icmax
         id2 = istims_begin[i]+icmax + yy.shape[0]
+        print(yynormlong.shape,fy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0].shape)
         fy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0] = fy[istims_begin[i]+icmax:istims_begin[i]+icmax+ yy.shape[0],0] + (yy[:,0] * beta)
-        betas[i] = beta * np.max(yy3)
-        lags[i] = tstims_begin[i] + tt[np.where(yy3>=max(yy3))[0][0]] + t2[icmax]
-
+        dcy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0] = (yy[:,0] * beta)
+        ypeaks[i] = beta * np.max(yy)
+        tpeaks[i] = tstims_begin[i] + tt[np.where(yysolve>=max(yysolve))[0][0] + icmax]
+        lags[i] = tstims_begin[i] + tt[icmax]
         
     # --------------------
     fh = plt.figure(figsize=[12,6])
     ah = fh.add_subplot(111)
     ah.plot(t,y)
     ah.plot(ft,fy)
+    ah.plot(dct,dcy,color='grey')
     ah.plot(t,s,'red')
-    ah.plot(lags,betas,color='red',marker='o',linestyle = 'None')
+    ah.plot(tpeaks,ypeaks,color='black',marker='o',linestyle = 'None',markersize = 5)
+    ah.plot(lags,np.zeros(len(lags)),color='red',marker='o',linestyle = 'None',markersize = 5)
     plt.show()
     plt.close()
     # return (ft,fy,lags,betas)
