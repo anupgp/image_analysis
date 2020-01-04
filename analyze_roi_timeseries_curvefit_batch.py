@@ -38,6 +38,13 @@ def butter_lowpass(cutoff,fs,order=5):
     b, a = butter(order,normal_cutoff,btype = 'low', analog = False)
     return (b,a)
 
+def background_subtraction(t,f,tpre):
+    # t: time, f: raw fluorescence, tpre: time from start for background substraction
+    print(t,f,tpre)
+    baseline = np.mean(f[0:np.where(t>=tpre)[0][0]-1])
+    print('baseline: ',baseline)
+    return((f-baseline)/baseline)
+
 def butter_lowpass_filter(t,y,cutoff,order=5):
     # compute fs: sampling frequency
     fs = 1/np.mean(np.diff(t))
@@ -45,7 +52,6 @@ def butter_lowpass_filter(t,y,cutoff,order=5):
     yy = lfilter(b,a,y)
     return(yy)
 
-        
 def alphaFunctionMulti(t,*args):
     nparams = len(args)
     # print(nparams)
@@ -106,6 +112,25 @@ def get_ntrialsrois(roicsv):
     # print(ntrialsrois)
     return(ntrialsrois)
 
+def display_trace(expfile,itrial,iroi,roitype):
+    # perform fit to each trial    
+    postfix = 'trial'+ str(itrial) + 'roi' + str(iroi)
+    print('itrial: ',itrial,' iroi: ', iroi, ' roitype: ',roitype)
+    tcolname = 'time_' + postfix
+    ycolname = roitype + '_' + postfix
+    scolname = 'stim_' + postfix
+    t = expfile[tcolname].to_numpy()
+    y = expfile[ycolname].to_numpy()
+    s = expfile[scolname].to_numpy()
+    # ------
+    fh = plt.figure()
+    ah = fh.add_subplot(111)
+    ah.plot(t,y)
+    ah.plot(t,y1)
+    ah.plot(t,s)
+    plt.show()
+    input('key')
+    
 def roidata_fit(expfile,itrial,iroi,roitype):
     # perform fit to each trial    
     postfix = 'trial'+ str(itrial) + 'roi' + str(iroi)
@@ -116,6 +141,7 @@ def roidata_fit(expfile,itrial,iroi,roitype):
     t = expfile[tcolname].to_numpy()
     y = expfile[ycolname].to_numpy()
     s = expfile[scolname].to_numpy()
+    # ------
     # values to generate initial parameters for curve fit
     nstim = len(np.where(s>0)[0])   # number of stimulii
     tstim0 = t[np.where(s>0)[0][0]] # time of first stimulus
@@ -129,17 +155,27 @@ def roidata_fit(expfile,itrial,iroi,roitype):
     y1 = y[(t>tstart) & (t<tstop)]
     s1 = s[(t>tstart) & (t<tstop)]
     t1 = t1-t1[0]                         # time starts at t = 0
-    # --------
-    # detrend data
-    y1 = detrend(y1,type="linear")
     # ---------
     # filter data
-    cutoff = 3                  # cutoff frequency
-    y0 = butter_lowpass_filter(t1,y1,cutoff)
-    y1 = y1-y0
-    # ------
+    # cutoff frequency
+    cutoff = 1                  
+    y0 = butter_lowpass_filter(t,y,cutoff)
+    # y1 = y1-y0
     # smooth data
-    y1 = smooth(y1,windowlen=5,window='hamming')
+    # y1 = smooth(y1,windowlen=3,window='hamming')
+    # detrend data
+    y1 = detrend(y)   
+    # background substract
+    # y1 = background_subtraction(t1,y1,toffset)
+
+    # ------
+    fh = plt.figure()
+    ah = fh.add_subplot(111)
+    ah.plot(t,y)
+    ah.plot(t,y1)
+    ah.plot(t,s)
+    plt.show()
+    input('key')
     # ------
     mindelays = [(isi* i)+toffset for i in range(0,nstim)] # min delays for all the stimulai
     print(mindelays)
@@ -163,18 +199,14 @@ def roidata_fit(expfile,itrial,iroi,roitype):
     # -------------
     # params,params_covariance = optimize.curve_fit(alphaFunctionMulti,t1,y1,initialparams)
     params,params_covariance = optimize.curve_fit(alphaFunctionMulti,t1,y1,initialparams,bounds=(minbounds,maxbounds))
-
     return(t1,y1,s1,params,params_covariance,stimfreq)
-        
+
 # ------------------------------------------------------------------
 
-
-# datapath = '/Volumes/Anup_2TB/iglusnfr_analysis/'
-datapath = '/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/' 
-batchfname = datapath + 'test20hz.csv'
-# batchfname = datapath + 'iglusnfr_roi_timeseries_filenames_allV3.csv'
 # open the csv file containing the list of roi timeseries data
-
+datapath = '/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/' 
+fname = 'iglusnfr_roi_all.csv'
+batchfname = datapath + fname
 
 with open(batchfname,'r') as csvfile:
     batchcsv = pd.read_csv(csvfile)
@@ -182,14 +214,14 @@ with open(batchfname,'r') as csvfile:
 # open pandas dataframe to populate data
 roidf = pd.DataFrame()
 
-
 for i in range(0,len(batchcsv)):
     expfname = batchcsv['filename'][i] # complete filename with path
     exppath = re.search('^.+/+',expfname)[0] # path to filename
     expfname2 = re.search('[^/]+.csv$',expfname)[0][0:-4] # filename without extension
-    if(not os.path.isdir(exppath+"test20hz/"+expfname2)):
-       os.mkdir(exppath+"test20hz/"+expfname2)                           # mkdir to place all the figures for that particular file
-    figsavepath = exppath+"test20hz/"+expfname2 +'/'
+    # mkdir to place all the figures for that particular file
+    # if(not os.path.isdir(exppath+"test20hz/"+expfname2)):
+    #    os.mkdir(exppath+"test20hz/"+expfname2)                           
+    figsavepath = exppath
     print('opening roi timeseries file: ',expfname)
     # open one roi timeseries file 
     with open(expfname,'r') as csv_expfile:
@@ -251,10 +283,11 @@ for i in range(0,len(batchcsv)):
                 ah.plot(t1,yy[:,j],linewidth=2,color=colours[selectcolor])
                 selectcolor = not selectcolor
             # save the figure for a particular trial per roitype
-            figname = expfname2+'_' + roitype + str(iroi) + '_trial' + str(itrial) + '.png'
-            plt.savefig(figsavepath+figname)
-            plt.close(fh)
-            # plt.show()
+            # figname = expfname2+'_' + roitype + str(iroi) + '_trial' + str(itrial) + '.png'
+            # plt.savefig(figsavepath+figname)
+            # plt.close(fh)
+            plt.show()
+            input('press any key')
 
     # save roidf dataframe
 # roidfname = "iglusnfr_ca1_final_analysisV3.csv"
