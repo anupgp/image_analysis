@@ -53,7 +53,7 @@ def get_ntrialsrois(roicsv):
 
 def background_subtract(t,f,tstim0,tpre=0):
     # t: time, f: raw fluorescence, tpre: time from start for background substraction
-    print(t,f,tpre)
+    # print(t,f,tpre)
     f = f + min(f)
     itstim0 = np.where(t>tstim0)[0][0]-1
     itpre = np.where(t>tpre)[0][0]-1
@@ -61,7 +61,7 @@ def background_subtract(t,f,tstim0,tpre=0):
     print('baseline: ',baseline)
     return((baseline-f)/baseline)
 
-def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle=""):
+def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="",savepath=""):
     # template matching algorithm
     # tt: t of template
     # yy: y of template
@@ -165,10 +165,9 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="")
         yysolve = yysolve.reshape((yysolve.shape[0],1))
         # solve normal equation to estimate beta
         beta  = np.linalg.pinv(yysolve.dot(yysolve.T)).dot(yysolve).T.dot(yshift)
-        print(beta)
+        print(i,beta)
         id1 = istims_begin[i]+icmax
         id2 = istims_begin[i]+icmax + yy.shape[0]
-        print(yynormlong.shape,fy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0].shape)
         fy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0] = fy[istims_begin[i]+icmax:istims_begin[i]+icmax+ yy.shape[0],0] + (yy[:,0] * beta)
         dcy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0] = (yy[:,0] * beta)
         ny[istims_begin[i]+icmax:istims_begin[i]+icmax+yshift.shape[0],0] = yshift[:,0]
@@ -178,7 +177,6 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="")
         ypeaks[i] = beta * np.max(yy)
         tpeaks[i] = tstims_begin[i] + tt[np.where(yysolve>=max(yysolve))[0][0] + icmax]
         lags[i] = tstims_begin[i] + tt[icmax]
-        # print(tshift.shape,yshift.shape)
         
     # --------------------
     # crop the empty rows
@@ -215,10 +213,16 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="")
     ah1.set_title(figtitle+"_"+str(stimfreq) + 'Hz',fontproperties=fontprop)
     ah1.set_xlim([tstims_begin[0],tstims_end[-1]])
     ah1.set_ylim([min(y),max(y)])
+    # save figure if savepath is not empty and exists
+    if(not os.path.exists(savepath)):
+        print("Path to save the figure not found")
+    else:
+        figname = savepath + "/" + figtitle + "_" + str(stimfreq) + ".png"
+        print("Saving the figure:\t" + figname)
     # ----------
-    plt.show()
-    plt.close()
-    # return (ft,fy,lags,betas)
+    # plt.show()
+    # plt.close()
+    return (lags,tpeaks,ypeaks,stimfreq)
 
 def display_trace(expfile,itrial,iroi,roitype):
     # display each trial
@@ -290,22 +294,22 @@ roidf = pd.DataFrame()
 
 for i in range(0,len(batchcsv)):
     fname = batchcsv['filename'][i] # complete filename with path
-    fpath = re.search('^.+/+',fname)[0] # path to filename
+    fpath = re.search('^.+/+',fname)[0][0:-1] # path to filename
     fname0ext = re.search('[^/]+.csv$',fname)[0][0:-4] # filename without extension
     # mkdir to place all the figures for that particular file
     # if(not os.path.isdir(exppath+"test20hz/"+expfname2)):
     #    os.mkdir(exppath+"test20hz/"+expfname2)                           
     figsavepath = fpath
-    print('opening roi timeseries file: ',fname)
+    print('opening roi timeseries file:\t'+str(i)+" "+fname)
     # open one roi timeseries file 
     with open(fname,'r') as fp:
         csvfp = pd.read_csv(fp)
     fileinfo = get_ntrialsrois(csvfp)
-    print(fileinfo)
+    # print(fileinfo)
     # get date field from file
     filedate = re.search('[0-9]{8,8}?',fname0ext)[0]
     if (filedate is not None):
-        print('Filedate: ',filedate[0])
+        print('Filedate: ',filedate)
     else:
         print('Warning expdate not found!')
         filedate = ''
@@ -315,4 +319,11 @@ for i in range(0,len(batchcsv)):
         for itrial,iroi in fileinfo['i'+roitype+'s']:
             figname = fname0ext + "_" + roitype + str(iroi) + "_trial" + str(itrial)
             # display_trace(expfile,itrial,iroi,roitype)
-            template_match(csvfp,itrial,iroi,roitype,tt,yy,tmaxlag=0.010,figtitle=figname)
+            delays,tpeaks,ypeaks,stimfreq = template_match(csvfp,itrial,iroi,roitype,tt,yy,tmaxlag=0.010,figtitle=figname,savepath=figsavepath)
+            for istim in np.arange(0,len(ypeaks)):
+                record = {"filename":fname0ext,"date": filedate,"roitype": roitype,"iroi":iroi,"itrial":itrial,"istim":istim,"stimfreq":stimfreq,"delay":delays[istim],"peak":ypeaks[istim]}
+                print(record)
+                roidf = roidf.append(record,ignore_index = True) # append a record per stim,trial,roitype
+# -----------------
+roidfname = "iglusnfr_ca1_final_analysisV4.csv"
+roidf.to_csv(datapath+roidfname,index=False)
