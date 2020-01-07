@@ -80,7 +80,6 @@ istims_end = [np.where(t>=tstim)[0][0] for tstim in tstims_end]
 print(tstims_begin,istims_begin,tstims_begin.shape)
 print(tstims_end,istims_end,tstims_end.shape)
 print(tstims_end-tstims_begin)
-input('key')
 
 matplotlib.use("TkAgg")
 plt.ion()
@@ -119,7 +118,6 @@ for i in np.arange(0,len(istims_begin)):
         y3  = y3.reshape((len(y3),1))
         print(j,avgy2.shape,y2.shape)
         c[j] = np.correlate(y3[:,0],avgy2[:,0])
-        input('key')
 
     icmax = np.where(c>=np.max(c))[0][0]
     # shift y1 to max correlation
@@ -131,11 +129,10 @@ for i in np.arange(0,len(istims_begin)):
     avgy3 = yy[istims_begin[i]+icmax:istims_begin[i]+icmax+y2.shape[0]] + avgy[0:y2.shape[0],0]
     avgy3 = avgy3.reshape((avgy3.shape[0],1))
     print(icmax,y2.shape,avgy3.shape,avgy.shape)
-    input('key')
     beta  = np.linalg.pinv(avgy3.dot(avgy3.T)).dot(avgy3).T.dot(y2)
     print(beta)
     yy[istims_begin[i]+icmax:istims_begin[i]+icmax+avgy.shape[0]] = yy[istims_begin[i]+icmax:istims_begin[i]+icmax+avgy.shape[0]] + (avgy[:,0] * beta)
-    
+    # ----------------
     ph3.set_xdata(avgt+t[istims_begin[i]])
     ph3.set_ydata(avgy)
     ph4.set_xdata(tt)

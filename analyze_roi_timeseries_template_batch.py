@@ -61,7 +61,7 @@ def background_subtract(t,f,tstim0,tpre=0):
     print('baseline: ',baseline)
     return((baseline-f)/baseline)
 
-def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01):
+def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle=""):
     # template matching algorithm
     # tt: t of template
     # yy: y of template
@@ -97,6 +97,8 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01):
     tstims_end = np.concatenate((tstims,[tpost]))
     istims_begin = [np.where(t>tstim)[0][0]-1 for tstim in tstims_begin]
     istims_end = [np.where(t>tstim)[0][0]-1 for tstim in tstims_end]
+    stimfreq = int(round(1/np.mean(tstims_end[1:-1]-tstims_begin[1:-1])))
+    
     # -------------
     # polynomial fit on smooth data
     model = np.polyfit(t,smooth(y,windowlen=7,window='hanning'),16)
@@ -107,9 +109,15 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01):
     # create arrays to hold the new trace obtained through template match
     ft = np.zeros((len(t),1))
     ft[:,0] = t
+    nt = np.zeros((len(t),1))
+    nt[:,0] = t 
+    # ntsep = np.zeros((len(tt),len(istims_begin)))
     dct = np.zeros((len(t),1))
     dct[:,0] = t
     fy = np.zeros((len(t),1))
+    ny = np.zeros((len(t),1))
+    # array to hold responses for each indivigual stimulus
+    # nysep = np.zeros((len(tt),len(istims_begin)))
     dcy = np.zeros((len(t),1))
     lags = np.zeros(len(istims_begin))
     tpeaks = np.zeros(len(istims_begin))
@@ -163,19 +171,51 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01):
         print(yynormlong.shape,fy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0].shape)
         fy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0] = fy[istims_begin[i]+icmax:istims_begin[i]+icmax+ yy.shape[0],0] + (yy[:,0] * beta)
         dcy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0] = (yy[:,0] * beta)
+        ny[istims_begin[i]+icmax:istims_begin[i]+icmax+yshift.shape[0],0] = yshift[:,0]
+        # if (i > 0):
+        #     nysep[0:yshift.shape[0],i-1] = yshift[:,0]
+        #     ntsep[0:yshift.shape[0],i-1] = tshift[:,0]-tshift[0,0]
         ypeaks[i] = beta * np.max(yy)
         tpeaks[i] = tstims_begin[i] + tt[np.where(yysolve>=max(yysolve))[0][0] + icmax]
         lags[i] = tstims_begin[i] + tt[icmax]
+        # print(tshift.shape,yshift.shape)
         
     # --------------------
-    fh = plt.figure(figsize=[12,6])
-    ah = fh.add_subplot(111)
-    ah.plot(t,y)
-    ah.plot(ft,fy)
-    ah.plot(dct,dcy,color='grey')
-    ah.plot(t,s,'red')
-    ah.plot(tpeaks,ypeaks,color='black',marker='o',linestyle = 'None',markersize = 5)
-    ah.plot(lags,np.zeros(len(lags)),color='red',marker='o',linestyle = 'None',markersize = 5)
+    # crop the empty rows
+    # ilast0row = np.where(nt[1:,0] == 0)[0][0]
+    # nt = nt[0:ilast0row-1,:]
+    # ny = ny[0:ilast0row-1,:]
+    # --------------------
+    fh1 = plt.figure(figsize=[12,6])
+    ah1 = fh1.add_subplot(111)
+    ah1.plot(t,y,color='grey')
+    ah1.plot(nt,ny,color='black')
+    ah1.plot(ft,fy,color = 'orange')
+    ah1.plot(dct,dcy,color='purple')
+    ah1.plot(t,s,'red')
+    ah1.plot(tpeaks,ypeaks,color='red',marker='o',linestyle = 'None',markersize = 5)
+    ah1.plot(lags,np.zeros(len(lags)),color='green',marker='o',linestyle = 'None',markersize = 5)
+    # plot all the individual traces
+    # fh2 = plt.figure(figsize=[12,6])
+    # ah2 = fh2.add_subplot(111)
+    # for k in np.arange(0,nt.shape[1]):
+    #     ah2.plot(nt[:,k],ny[:,k])
+    # ah2.plot(nt[:,0],np.mean(ny,axis=1),color='black')
+    # -----------
+    ah1.spines["right"].set_visible(False)
+    ah1.spines["top"].set_visible(False)
+    ah1.spines["bottom"].set_linewidth(1)
+    ah1.spines["left"].set_linewidth(1)
+    ah1.set_xlabel('Time (s)',FontProperties=fontprop)
+    ah1.set_ylabel(r'$\Delta$F/F',fontproperties=fontprop)
+    ah1.tick_params(axis='both',length=6,direction='out',width=1,which='major')
+    ah1.tick_params(axis='both',length=3,direction='out',width=1,which='minor')
+    ah1.tick_params(axis='both', which='major', labelsize=16)
+    ah1.tick_params(axis='both', which='minor', labelsize=12)
+    ah1.set_title(figtitle+"_"+str(stimfreq) + 'Hz',fontproperties=fontprop)
+    ah1.set_xlim([tstims_begin[0],tstims_end[-1]])
+    ah1.set_ylim([min(y),max(y)])
+    # ----------
     plt.show()
     plt.close()
     # return (ft,fy,lags,betas)
@@ -225,6 +265,7 @@ batchfname = datapath + fname
 # load the template
 fname_success_avg = 'iglusnfr_ca1_success_avg.csv'
 success_avg = np.loadtxt(datapath+fname_success_avg,delimiter=',')
+# crop the template trace so that there is no delay
 tt = success_avg[2:-1,0]
 yy = success_avg[2:-1,1]
 yy[np.where(yy<0)[0]] = 0 
@@ -248,29 +289,30 @@ with open(batchfname,'r') as csvfile:
 roidf = pd.DataFrame()
 
 for i in range(0,len(batchcsv)):
-    expfname = batchcsv['filename'][i] # complete filename with path
-    exppath = re.search('^.+/+',expfname)[0] # path to filename
-    expfname2 = re.search('[^/]+.csv$',expfname)[0][0:-4] # filename without extension
+    fname = batchcsv['filename'][i] # complete filename with path
+    fpath = re.search('^.+/+',fname)[0] # path to filename
+    fname0ext = re.search('[^/]+.csv$',fname)[0][0:-4] # filename without extension
     # mkdir to place all the figures for that particular file
     # if(not os.path.isdir(exppath+"test20hz/"+expfname2)):
     #    os.mkdir(exppath+"test20hz/"+expfname2)                           
-    figsavepath = exppath
-    print('opening roi timeseries file: ',expfname)
+    figsavepath = fpath
+    print('opening roi timeseries file: ',fname)
     # open one roi timeseries file 
-    with open(expfname,'r') as csv_expfile:
-        expfile = pd.read_csv(csv_expfile)
-    expfileinfo = get_ntrialsrois(expfile)
-    print(expfileinfo)
+    with open(fname,'r') as fp:
+        csvfp = pd.read_csv(fp)
+    fileinfo = get_ntrialsrois(csvfp)
+    print(fileinfo)
     # get date field from file
-    expdate = re.search('[0-9]{8,8}?',expfname)[0]
-    if (expdate is not None):
-        print('expdate: ',expdate[0])
+    filedate = re.search('[0-9]{8,8}?',fname0ext)[0]
+    if (filedate is not None):
+        print('Filedate: ',filedate[0])
     else:
         print('Warning expdate not found!')
-        expdate = ''
+        filedate = ''
     # process spine rois
     roitypes = ["spine","dendrite"]
     for roitype in roitypes:
-        for itrial,iroi in expfileinfo['i'+roitype+'s']:
+        for itrial,iroi in fileinfo['i'+roitype+'s']:
+            figname = fname0ext + "_" + roitype + str(iroi) + "_trial" + str(itrial)
             # display_trace(expfile,itrial,iroi,roitype)
-            template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag=0.010)
+            template_match(csvfp,itrial,iroi,roitype,tt,yy,tmaxlag=0.010,figtitle=figname)
