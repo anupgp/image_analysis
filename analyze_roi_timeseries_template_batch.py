@@ -98,7 +98,6 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="",
     istims_begin = [np.where(t>tstim)[0][0]-1 for tstim in tstims_begin]
     istims_end = [np.where(t>tstim)[0][0]-1 for tstim in tstims_end]
     stimfreq = int(round(1/np.mean(tstims_end[1:-1]-tstims_begin[1:-1])))
-    
     # -------------
     # polynomial fit on smooth data
     model = np.polyfit(t,smooth(y,windowlen=7,window='hanning'),16)
@@ -107,18 +106,18 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="",
     y = background_subtract(t,y,tstims[0],tpre)
     # -------------
     # create arrays to hold the new trace obtained through template match
-    ft = np.zeros((len(t),1))
-    ft[:,0] = t
     nt = np.zeros((len(t),1))
     nt[:,0] = t 
-    # ntsep = np.zeros((len(tt),len(istims_begin)))
+    ny = np.zeros((len(t),1))   # portion of y that maximally correlated with the template
     dct = np.zeros((len(t),1))
     dct[:,0] = t
-    fy = np.zeros((len(t),1))
-    ny = np.zeros((len(t),1))
-    # array to hold responses for each indivigual stimulus
-    # nysep = np.zeros((len(tt),len(istims_begin)))
-    dcy = np.zeros((len(t),1))
+    dcy = np.zeros((len(t),1))  # y deconvolved
+    ft = np.zeros((len(t),1))
+    ft[:,0] = t
+    fy = np.zeros((len(t),1))   # new y from the shifted and scaled template
+    tsep = np.repeat(tt,len(istims_begin)).reshape(len(tt),len(istims_begin)) # holds individual response traces
+    ysep = np.zeros((len(tt),len(istims_begin)))
+    # holds extracted lag and peak values of the deconvolved trace
     lags = np.zeros(len(istims_begin))
     tpeaks = np.zeros(len(istims_begin))
     ypeaks = np.zeros(len(istims_begin))
@@ -171,18 +170,18 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="",
         fy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0] = fy[istims_begin[i]+icmax:istims_begin[i]+icmax+ yy.shape[0],0] + (yy[:,0] * beta)
         dcy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0] = (yy[:,0] * beta)
         ny[istims_begin[i]+icmax:istims_begin[i]+icmax+yshift.shape[0],0] = yshift[:,0]
-        # if (i > 0):
-        #     nysep[0:yshift.shape[0],i-1] = yshift[:,0]
-        #     ntsep[0:yshift.shape[0],i-1] = tshift[:,0]-tshift[0,0]
+        tsep[0:yshift.shape[0],i] = tshift[:,0]-tshift[0,0]
+        ysep[0:yshift.shape[0],i] = yshift[:,0]
         ypeaks[i] = beta * np.max(yy)
         tpeaks[i] = tstims_begin[i] + tt[np.where(yysolve>=max(yysolve))[0][0] + icmax]
         lags[i] = tstims_begin[i] + tt[icmax]
         
     # --------------------
     # crop the empty rows
-    # ilast0row = np.where(nt[1:,0] == 0)[0][0]
-    # nt = nt[0:ilast0row-1,:]
-    # ny = ny[0:ilast0row-1,:]
+    ilast0row = np.where(ysep[1:,0] == 0)[0][0]
+    tsep = tsep[0:ilast0row,:]
+    # tsep[np.where(tsep[1:,:] == 0)] = 
+    ysep = ysep[0:ilast0row,:]
     # --------------------
     fh1 = plt.figure(figsize=[12,6])
     ah1 = fh1.add_subplot(111)
@@ -194,11 +193,12 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="",
     ah1.plot(tpeaks,ypeaks,color='red',marker='o',linestyle = 'None',markersize = 5)
     ah1.plot(lags,np.zeros(len(lags)),color='green',marker='o',linestyle = 'None',markersize = 5)
     # plot all the individual traces
-    # fh2 = plt.figure(figsize=[12,6])
-    # ah2 = fh2.add_subplot(111)
-    # for k in np.arange(0,nt.shape[1]):
-    #     ah2.plot(nt[:,k],ny[:,k])
-    # ah2.plot(nt[:,0],np.mean(ny,axis=1),color='black')
+    fh2 = plt.figure(figsize=[12,6])
+    ah2 = fh2.add_subplot(111)
+    plotcolors = ["red","grey"]
+    for k in np.arange(0,tsep.shape[1]):
+        ah2.plot(tsep[:,k],ysep[:,k],color = plotcolors[int(k>0)])
+    ah2.plot(tsep[:,0],np.mean(ysep[:,1:],axis=1),color='black')
     # -----------
     ah1.spines["right"].set_visible(False)
     ah1.spines["top"].set_visible(False)
@@ -213,15 +213,29 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="",
     ah1.set_title(figtitle+"_"+str(stimfreq) + 'Hz',fontproperties=fontprop)
     ah1.set_xlim([tstims_begin[0],tstims_end[-1]])
     ah1.set_ylim([min(y),max(y)])
+    # --------------
+    ah2.spines["right"].set_visible(False)
+    ah2.spines["top"].set_visible(False)
+    ah2.spines["bottom"].set_linewidth(1)
+    ah2.spines["left"].set_linewidth(1)
+    ah2.set_xlabel('Time (s)',FontProperties=fontprop)
+    ah2.set_ylabel(r'$\Delta$F/F',fontproperties=fontprop)
+    ah2.tick_params(axis='both',length=6,direction='out',width=1,which='major')
+    ah2.tick_params(axis='both',length=3,direction='out',width=1,which='minor')
+    ah2.tick_params(axis='both', which='major', labelsize=16)
+    ah2.tick_params(axis='both', which='minor', labelsize=12)
+    ah2.set_title(figtitle+"_"+str(stimfreq) + 'Hz',fontproperties=fontprop)
+    # --------------
     # save figure if savepath is not empty and exists
     if(not os.path.exists(savepath)):
         print("Path to save the figure not found")
     else:
-        figname = savepath + "/" + figtitle + "_" + str(stimfreq) + ".png"
+        figname = savepath + "/" + figtitle + "_" + str(stimfreq) + "Hz" + ".png"
         print("Saving the figure:\t" + figname)
     # ----------
-    # plt.show()
-    # plt.close()
+    plt.show()
+    input('press a key')
+    plt.close()
     return (lags,tpeaks,ypeaks,stimfreq)
 
 def display_trace(expfile,itrial,iroi,roitype):
@@ -325,5 +339,5 @@ for i in range(0,len(batchcsv)):
                 print(record)
                 roidf = roidf.append(record,ignore_index = True) # append a record per stim,trial,roitype
 # -----------------
-roidfname = "iglusnfr_ca1_final_analysisV4.csv"
-roidf.to_csv(datapath+roidfname,index=False)
+# roidfname = "iglusnfr_ca1_final_analysisV4.csv"
+# roidf.to_csv(datapath+roidfname,index=False)

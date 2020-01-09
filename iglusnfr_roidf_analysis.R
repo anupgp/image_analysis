@@ -1,10 +1,10 @@
 rm(list=ls());
 source("/Users/macbookair/goofy/codes/image_analysis/loadlibraries.R");
 ## load the dataframe in csv format
-datapath = "/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis_old"
-roidf = read.csv(paste(datapath,'iglusnfr_ca1_final_analysisV3.csv',sep='/'),sep=",",header=TRUE,stringsAsFactors=FALSE,row.names=NULL);
+datapath = "/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis"
+roidf = read.csv(paste(datapath,'iglusnfr_ca1_final_analysisV4.csv',sep='/'),sep=",",header=TRUE,stringsAsFactors=FALSE,row.names=NULL);
 ## remove rows with more than 8 istim
-roidf = roidf[roidf$istim<=8,]
+## roidf = roidf[roidf$istim<=8,]
 ## add a new column to hold expid
 filenames = roidf$filename
 expids = unlist(lapply(filenames,FUN=function(x){il=regexpr('[0-9]+_[^_]+_?',x,perl=TRUE)[];ir  = il + attr(regexpr('[0-9]+_[^_]+_?',x,perl=TRUE),'match.length')-1;return(substr(x,il,ir-1))}))
@@ -12,7 +12,7 @@ roidf = cbind(roidf,expid = expids)
 ## add new columm to hold roiid
 roiids = paste(roidf[,"expid"],roidf[,"roitype"],roidf[,"iroi"],sep="_")
 roidf = cbind(roidf,roiid = roiids)
-## itrial begins from 1 for each filename, make a new itrial to could trials of each roiid
+## itrial begins from 1 for each filename, make a new itrial to count trials of each roiid
 roidf = ddply(roidf,.(roiid,stimfreq,istim),function(x){
     trial = seq(1,dim(x)[1],1)
     dfout = cbind(x,trial = trial)
