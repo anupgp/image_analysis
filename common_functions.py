@@ -18,10 +18,10 @@ def check_path(path):
 
 def string_convert(astring):
     try:
-        return(int(astring))
+        return(float(astring))
     except:
         try:
-            return(float(astring))
+            return(int(astring))
         except:
             if (astring == 'True' or astring == 'true' or astring == 'TRUE'):
                 return(True)

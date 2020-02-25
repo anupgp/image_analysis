@@ -144,7 +144,7 @@ class Image:
                         
     def read_metadata_main(self,fname,metadata_elements):
         with czifile.CziFile(fname) as czi:
-            metadata_xmlstr = czi.metadata(raw=True)
+             metadata_xmlstr = czi.metadata(raw=True)
             # print(metadata_xmlstr)
             self.metadata = metadata_xmlstr_to_metadata_dict(metadata_xmlstr,metadata_keys)
 
@@ -164,7 +164,10 @@ class Image:
             if(sizeX>0 and sizeY == 0 and sizeT == 0):
                 # Found a single line scan
                 self.img_type = "linescan" # BVCTZYX0' -> CX
+                print(self.img.shape)
+                input('key')
                 self.img = self.img_raw[0,0,:,0,0,0,:,0]
+                
                 # reduce pixel data format to 8 bits
                 if (bitsize>8):
                     self.img = np.uint8((self.img/(pow(2,bitsize)-1))*(pow(2,8)-1))
@@ -173,12 +176,17 @@ class Image:
                 # Zeiss puts channel one as Green, then Red so, swap them again
                 self.img = np.flip(self.img,-1)
                 # add missing channels for RGB image
-                self.img = np.concatenate([self.img[:,np.newaxis,:],np.zeros((sizeX,1,3-sizeC),dtype=np.uint8)],axis=-1)
-                
+                self.img = np.concatenate([self.img[:,np.newaxis,:],np.zeros((sizeX,1,3-sizeC),dtype=np.uint8)],axis=-1) # original
+                # self.img = np.concatenate([self.img[np.newaxis,:,:],np.zeros((sizeX,1,3-sizeC),dtype=np.uint8)],axis=-1)
+                print(self.img)
+                input('key')
             if(sizeX>0 and sizeY == 0 and sizeT >0):
                 # Found linescan timeseries
                 self.img_type = "linescan timeseries" # TX
-                self.img = self.img_raw[0,0,:,:,0,0,:,0] # BVCTZYX0' -> CX
+                # print(self.img_raw.shape)
+                # input('key')                
+                # self.img = self.img_raw[0,0,:,:,0,0,:,0] # BVCTZYX0' -> CX # put this back!
+                self.img = self.img_raw[0,:,:,0,0,:,0] # BVCTZYX0' -> CX
                 # reduce pixel data format to 8 bits
                 if (bitsize>8):
                     self.img = np.uint8((self.img/(pow(2,bitsize)-1))*(pow(2,8)-1))
@@ -235,7 +243,8 @@ class Image:
                     bitsize = self.attachimage_metadata['ComponentBitCount']
                     # self.attachimageraw = czifile.CziFile(BytesIO(attachment.data(raw=True))) # NOT NEEDED
                     # reduce image dimension to CYX
-                    img = self.attachimage_raw[0,0,0:sizeC,0,0,0:sizeY,0:sizeX,0] # 'BVCTZYX0' -> CYX
+                    # img = self.attachimage_raw[0,0,0:sizeC,0,0,0:sizeY,0:sizeX,0] # 'BVCTZYX0' -> CYX original
+                    img = self.attachimage_raw[0,0:sizeC,0,0,0:sizeY,0:sizeX,0] # 'BVCTZYX0' -> CYX
                     # reduce pixel data format to 8 bits
                     if (bitsize>8):
                         img = np.uint8((img/(pow(2,bitsize)-1))*(pow(2,8)-1))
@@ -244,7 +253,9 @@ class Image:
                     # flip image for top down orientation
                     img = np.flip(img,1)
                     # add channels for RGB display
-                    img = np.concatenate((img[:,:,1][:,:,np.newaxis],img[:,:,0][:,:,np.newaxis],np.ones((sizeX,sizeY,1),dtype=np.uint8)*0),axis=-1)
+                    img = np.concatenate((img[:,:,1][:,:,np.newaxis],img[:,:,0][:,:,np.newaxis],np.ones((sizeX,sizeY,1),dtype=np.uint8)*0),axis=-1) # orginal
+                    # print(img.shape,bitsize)
+                    # input('keky')
                     self.attachimage = img
                     
                 if attachment.attachment_entry.name == 'TimeStamps':

@@ -2,7 +2,7 @@ rm(list=ls());
 source("/Users/macbookair/goofy/codes/image_analysis/loadlibraries.R");
 ## load the dataframe in csv format
 datapath = "/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis"
-roidf = read.csv(paste(datapath,'iglusnfr_ca1_final_analysisV4.csv',sep='/'),sep=",",header=TRUE,stringsAsFactors=FALSE,row.names=NULL);
+roidf = read.csv(paste(datapath,'iglusnfr_ca1_final_roidf_template_match_method.csv',sep='/'),sep=",",header=TRUE,stringsAsFactors=FALSE,row.names=NULL);
 ## remove rows with more than 8 istim
 ## roidf = roidf[roidf$istim<=8,]
 ## add a new column to hold expid

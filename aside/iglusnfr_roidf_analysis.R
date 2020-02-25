@@ -94,4 +94,3 @@ roidf=ddply(roidf,.(roiid,stimfreq),function(x){
     return(as.data.frame(dfout))})
 ##
 unique(as.character(roidf[roidf$stimfreq == 2 & roidf$roitype == "spine"  ,"roiid"]))
-roiidomit2hz

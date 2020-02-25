@@ -61,7 +61,7 @@ def background_subtract(t,f,tstim0,tpre=0):
     print('baseline: ',baseline)
     return((baseline-f)/baseline)
 
-def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="",savepath=""):
+def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="",figpath=""):
     # template matching algorithm
     # tt: t of template
     # yy: y of template
@@ -170,18 +170,26 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="",
         fy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0] = fy[istims_begin[i]+icmax:istims_begin[i]+icmax+ yy.shape[0],0] + (yy[:,0] * beta)
         dcy[istims_begin[i]+icmax:istims_begin[i]+icmax+yy.shape[0],0] = (yy[:,0] * beta)
         ny[istims_begin[i]+icmax:istims_begin[i]+icmax+yshift.shape[0],0] = yshift[:,0]
-        tsep[0:yshift.shape[0],i] = tshift[:,0]-tshift[0,0]
-        ysep[0:yshift.shape[0],i] = yshift[:,0]
+        # ----------------
+        # ysep holds values from the start of the response, ie not from the start of the stimulus 
+        # tsep[0:yshift.shape[0],i] = tshift[:,0]-tshift[0,0]
+        # ysep[0:yshift.shape[0],i] = yshift[:,0]
+        # ----------------
+        # ysep holds values from the start of the stimulus
+        tsep[0:minlen,i] = tres[0:minlen]
+        ysep[0:minlen,i] = yres[0:minlen]
+        # ----------------
         ypeaks[i] = beta * np.max(yy)
         tpeaks[i] = tstims_begin[i] + tt[np.where(yysolve>=max(yysolve))[0][0] + icmax]
-        lags[i] = tstims_begin[i] + tt[icmax]
+        lags[i] = tt[icmax]
         
     # --------------------
     # crop the empty rows
-    ilast0row = np.where(ysep[1:,0] == 0)[0][0]
-    tsep = tsep[0:ilast0row,:]
-    # tsep[np.where(tsep[1:,:] == 0)] = 
-    ysep = ysep[0:ilast0row,:]
+    if (len(np.where(ysep[1:,0] == 0)[0])>0):
+        ilast0row = np.where(ysep[1:,0] == 0)[0][0]
+        tsep = tsep[0:ilast0row,:]
+        ysep = ysep[0:ilast0row,:]
+       
     # --------------------
     fh1 = plt.figure(figsize=[12,6])
     ah1 = fh1.add_subplot(111)
@@ -191,15 +199,17 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="",
     ah1.plot(dct,dcy,color='purple')
     ah1.plot(t,s,'red')
     ah1.plot(tpeaks,ypeaks,color='red',marker='o',linestyle = 'None',markersize = 5)
-    ah1.plot(lags,np.zeros(len(lags)),color='green',marker='o',linestyle = 'None',markersize = 5)
+    ah1.plot(tstims_begin + lags,np.zeros(len(lags)),color='green',marker='o',linestyle = 'None',markersize = 5)
     # plot all the individual traces
     fh2 = plt.figure(figsize=[12,6])
     ah2 = fh2.add_subplot(111)
     plotcolors = ["red","grey"]
+    # ---------------------
+    # plot ysep
     for k in np.arange(0,tsep.shape[1]):
         ah2.plot(tsep[:,k],ysep[:,k],color = plotcolors[int(k>0)])
     ah2.plot(tsep[:,0],np.mean(ysep[:,1:],axis=1),color='black')
-    # -----------
+    # ----------------
     ah1.spines["right"].set_visible(False)
     ah1.spines["top"].set_visible(False)
     ah1.spines["bottom"].set_linewidth(1)
@@ -225,18 +235,24 @@ def template_match(expfile,itrial,iroi,roitype,tt,yy,tmaxlag = 0.01,figtitle="",
     ah2.tick_params(axis='both', which='major', labelsize=16)
     ah2.tick_params(axis='both', which='minor', labelsize=12)
     ah2.set_title(figtitle+"_"+str(stimfreq) + 'Hz',fontproperties=fontprop)
+    ah2.set_xlim([np.min(tsep),np.max(tsep)])
+    ah2.set_ylim([np.min(ysep),np.max(ysep)])
     # --------------
-    # save figure if savepath is not empty and exists
-    if(not os.path.exists(savepath)):
+    # save figure 1 if savepath is not empty and exists
+    if(not os.path.exists(figpath)):
         print("Path to save the figure not found")
     else:
-        figname = savepath + "/" + figtitle + "_" + str(stimfreq) + "Hz" + ".png"
-        print("Saving the figure:\t" + figname)
+        ah1figname = figpath + "/" + figtitle + "_" + str(stimfreq) + "Hz" + ".png"
+        # print("Saving the figure 1:\t" + ah1figname)
+        # fh1.savefig(ah1figname)
+        ah2figname = figpath + "/" + figtitle + "_" + str(stimfreq) + "Hz" + "_traces" + ".png"
+        # print("Saving the figure 2:\t" + ah2figname)
+        # fh2.savefig(ah2figname)
     # ----------
-    plt.show()
-    input('press a key')
-    plt.close()
-    return (lags,tpeaks,ypeaks,stimfreq)
+    # plt.show()
+    # input('press a key')
+    # plt.close()
+    return (lags,tpeaks,ypeaks,stimfreq,tsep,ysep)
 
 def display_trace(expfile,itrial,iroi,roitype):
     # display each trial
@@ -275,7 +291,7 @@ def display_trace(expfile,itrial,iroi,roitype):
     input('press any key')
     plt.close()
 
-    # open the csv file containing the list of roi timeseries data
+# open the csv file containing the list of roi timeseries data
 datapath = '/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/' 
 fname = 'iglusnfr_roi_all.csv'
 batchfname = datapath + fname
@@ -331,9 +347,18 @@ for i in range(0,len(batchcsv)):
     roitypes = ["spine","dendrite"]
     for roitype in roitypes:
         for itrial,iroi in fileinfo['i'+roitype+'s']:
-            figname = fname0ext + "_" + roitype + str(iroi) + "_trial" + str(itrial)
+            figname =  fname0ext + "_" + roitype + str(iroi) + "_trial" + str(itrial)
             # display_trace(expfile,itrial,iroi,roitype)
-            delays,tpeaks,ypeaks,stimfreq = template_match(csvfp,itrial,iroi,roitype,tt,yy,tmaxlag=0.010,figtitle=figname,savepath=figsavepath)
+            delays,tpeaks,ypeaks,stimfreq,tres,yres = template_match(csvfp,itrial,iroi,roitype,tt,yy,tmaxlag=0.010,figtitle=figname,figpath=figsavepath)
+            print(delays)
+            # save each of the trace
+            for ires in np.arange(0,tres.shape[1]):
+                tracesavepath = fpath + "/" + fname0ext + "_" + roitype + str(iroi) + "_trial" + str(itrial) + "_" + str(stimfreq) + 'Hz' + "_trace" + str(ires) + "_delay" + str(int(round(delays[ires]*1000000))) + "_peak" + str(int(round(ypeaks[ires]*1000000))) + ".csv"
+                print(tracesavepath)
+                t = tres[:,ires].reshape(tres.shape[0],1)
+                y = yres[:,ires].reshape(tres.shape[0],1)
+                np.savetxt(tracesavepath,np.concatenate((t,y),axis=1),delimiter=",")
+            # save the dataframe
             for istim in np.arange(0,len(ypeaks)):
                 record = {"filename":fname0ext,"date": filedate,"roitype": roitype,"iroi":iroi,"itrial":itrial,"istim":istim,"stimfreq":stimfreq,"delay":delays[istim],"peak":ypeaks[istim]}
                 print(record)

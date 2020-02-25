@@ -12,9 +12,10 @@ import re
 import os
 
 # read masterfile in Microsoft_excel
-masterfile_path = '/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/'
-image_path = '/Volumes/Anup_2TB/raw_data/beiquelab/zen/'
-masterfname = masterfile_path + 'anup_iglusnfr_all_good_data.xlsx'
+# masterfile_path = '/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/'
+masterfile_path = '/Volumes/UOTT JF/czi file/'
+image_path = '/Volumes/UOTT JF/czi file/'
+masterfname = masterfile_path + 'czifile.xlsx'
 masterdf = pd.read_excel(masterfname,header=0,use_cols=11)
 colnames = list(masterdf.columns)
 fcount=0
