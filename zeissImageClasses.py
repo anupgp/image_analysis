@@ -14,16 +14,16 @@ from os import path
 
 
 metadata_keys = [{"name":"./Metadata/Information/Image/","tags":["PixelType","ComponentBitCount","SizeX","SizeY","SizeZ","SizeC","SizeT"]},
-                     {"name":"./Metadata/Information/Image/Dimensions/Channels/Channel/LaserScanInfo/","tags":[]},
-                     {"name":"./Metadata/Information/Instrument/Objectives/Objective/","tags":["Immersion","LensNA","NominalMagnification"]},
-                     {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/AcquisitionModeSetup/","tags":["BitsPerSample","OffsetX","OffsetY","OffsetZ","Reference","PixelPeriod","Rotation","AcqisitionMode","ScalingX","ScalingY","ScalingZ","TimeSeries","ZoomX","ZoomY"]},
-                     {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/TimeSeriesSetup/StartMode/OnTrigger/","tags":[]},
-                     {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/TimeSeriesSetup/Switches/Switch/","tags":["DigitalIn"]},
-                     {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/TimeSeriesSetup/Switches/Switch/SwitchAction/NoneAction/","tags":[]},
-                     {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/MultiTrackSetup/TrackSetup/Attenuators/Attenuator/","tags":[]},
-                     {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/MultiTrackSetup/TrackSetup/Detectors/Detector/","tags":["ImageChannelName","AmplifierGain","AmplifierOffset","DigitalGain","DigitalOffset"]},
-                     {"name":"./Metadata/Layers/Layer/Elements/OpenArrow/Geometry/","tags":[]},
-                     {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/Lasers/Laser/","tags":[]}]
+                 {"name":"./Metadata/Information/Image/Dimensions/Channels/Channel/LaserScanInfo/","tags":[]},
+                 {"name":"./Metadata/Information/Instrument/Objectives/Objective/","tags":["Immersion","LensNA","NominalMagnification"]},
+                 {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/AcquisitionModeSetup/","tags":["BitsPerSample","OffsetX","OffsetY","OffsetZ","Reference","PixelPeriod","Rotation","AcqisitionMode","ScalingX","ScalingY","ScalingZ","TimeSeries","ZoomX","ZoomY"]},
+                 {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/TimeSeriesSetup/StartMode/OnTrigger/","tags":[]},
+                 {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/TimeSeriesSetup/Switches/Switch/","tags":["DigitalIn"]},
+                 {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/TimeSeriesSetup/Switches/Switch/SwitchAction/NoneAction/","tags":[]},
+                 {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/MultiTrackSetup/TrackSetup/Attenuators/Attenuator/","tags":[]},
+                 {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/MultiTrackSetup/TrackSetup/Detectors/Detector/","tags":["ImageChannelName","AmplifierGain","AmplifierOffset","DigitalGain","DigitalOffset"]},
+                 {"name":"./Metadata/Layers/Layer/Elements/OpenArrow/Geometry/","tags":[]},
+                 {"name":"./Metadata/Experiment/ExperimentBlocks/AcquisitionBlock/Lasers/Laser/","tags":[]}]
 
 def background_subtraction(t,f,tpre):
     # t: time, f: raw fluorescence, tpre: time from start for background substraction
@@ -69,15 +69,15 @@ def display_lineselect_image(img,channelid,x1=0,y1=256,x2=512,y2=256,linescan=[]
         # numpy based linear interpolation
         linescan = np.interp(np.linspace(0,len(img)-1,len(img)),np.linspace(0,len(img)-1,len(linescan)),linescan)
         ah2.plot(linescan+len(img)/2,np.linspace(0,len(img)-1,len(img)),color='gray',linewidth=1)
-    # Move left y-axis and bottim x-axis to centre, passing through (0,0)
-    # ah2.spines['left'].set_position('center')
-    # ah2.spines['bottom'].set_position('center')
-    # Eliminate upper and right axes
-    # ah2.spines['right'].set_color('none')
-    # ah2.spines['top'].set_color('none')
-    # Show ticks in the left and lower axes only
-    # ah2.xaxis.set_ticks_position('bottom')
-    # ah2.yaxis.set_ticks_position('left')
+        # Move left y-axis and bottim x-axis to centre, passing through (0,0)
+        # ah2.spines['left'].set_position('center')
+        # ah2.spines['bottom'].set_position('center')
+        # Eliminate upper and right axes
+        # ah2.spines['right'].set_color('none')
+        # ah2.spines['top'].set_color('none')
+        # Show ticks in the left and lower axes only
+        # ah2.xaxis.set_ticks_position('bottom')
+        # ah2.yaxis.set_ticks_position('left')
     if (path.isdir(savepath) and len(title)>0):
         print('Path to save found!')
         print('Saving as:', savepath+'/'+title+'.png')
@@ -96,7 +96,7 @@ def eventtimes2events(ts,tevts):
         d = np.where(ts>tevt)[0]
         if(len(d)>0):
             ievts = np.append(ievts,d[0]-1)
-    ievts = np.uint(ievts)
+            ievts = np.uint(ievts)
     if(len(ievts)>0):
         evts[ievts] = 1
     return(evts)
@@ -109,11 +109,13 @@ def metadata_xmlstr_to_metadata_dict(metadata_xmlstr,metadata_elements):
         for item in root.findall(element["name"]):
             key = item.tag
             value = comfun.string_convert(item.text)
+            # print(key,value)
             if (key in element["tags"]) or (not element["tags"]):
                 if(key in metadata.keys()):
                     key = key+"2"
                 metadata[key] = value
-                
+                # print("metadata:\t",key,value)
+                    
     return(metadata)
 
 def show_metadata(metadata):
@@ -141,10 +143,10 @@ class Image:
         # show_metadata(self.metadata)
         self.read_data_main()                                 # read main data from the file
         self.read_attachments()                               # read attachment data and metadata
-                        
+        
     def read_metadata_main(self,fname,metadata_elements):
         with czifile.CziFile(fname) as czi:
-             metadata_xmlstr = czi.metadata(raw=True)
+            metadata_xmlstr = czi.metadata(raw=True)
             # print(metadata_xmlstr)
             self.metadata = metadata_xmlstr_to_metadata_dict(metadata_xmlstr,metadata_keys)
 
@@ -152,7 +154,7 @@ class Image:
         with czifile.CziFile(self.fname) as czi:
             imgshape = np.array(czi.shape)
             imgaxes = list(czi.axes)
-            # print(imgshape,imgaxes)
+            print(imgshape,imgaxes)
             self.img_raw = czi.asarray()
             # get image info from metadata
             sizeX = self.metadata['SizeX'] if 'SizeX' in self.metadata.keys() else 0
@@ -160,6 +162,7 @@ class Image:
             sizeZ = self.metadata['SizeZ'] if 'SizeZ' in self.metadata.keys() else 0
             sizeC = self.metadata['SizeC'] if 'SizeC' in self.metadata.keys() else 0
             sizeT = self.metadata['SizeT'] if 'SizeT' in self.metadata.keys() else 0
+            # bitsize = self.metadata['ComponentBitCount'] if 'SizeT' in self.metadata.keys() else 0
             bitsize = self.metadata['ComponentBitCount']
             if(sizeX>0 and sizeY == 0 and sizeT == 0):
                 # Found a single line scan
@@ -171,7 +174,7 @@ class Image:
                 # reduce pixel data format to 8 bits
                 if (bitsize>8):
                     self.img = np.uint8((self.img/(pow(2,bitsize)-1))*(pow(2,8)-1))
-                # reorder dimensions: XC
+                    # reorder dimensions: XC
                 self.img = self.img.swapaxes(0,-1)
                 # Zeiss puts channel one as Green, then Red so, swap them again
                 self.img = np.flip(self.img,-1)
@@ -190,14 +193,14 @@ class Image:
                 # reduce pixel data format to 8 bits
                 if (bitsize>8):
                     self.img = np.uint8((self.img/(pow(2,bitsize)-1))*(pow(2,8)-1))
-                # reorder dimensions: XC
+                    # reorder dimensions: XC
                 self.img = self.img.swapaxes(0,-1)
                 # Zeiss puts channel one as Green, then Red so, swap them again
                 self.img = np.flip(self.img,-1)
                 # add missing channels for RGB image
                 self.img = np.concatenate([self.img,np.zeros((sizeX,sizeT,3-sizeC),dtype=np.uint8)],axis=-1)
                 print('img.shape = ',self.img.shape)
-                    
+                
             if(sizeX>0 and sizeY > 0 and sizeT  == 0):
                 # Found single frame scan
                 self.img_type = "framescan"
@@ -212,7 +215,7 @@ class Image:
                 # reduce pixel data format to 8 bits
                 if (bitsize>8):
                     self.img = np.uint8((self.img/(pow(2,bitsize)-1))*(pow(2,8)-1))
-                # reorder dimensions: XYZC
+                    # reorder dimensions: XYZC
                 self.img = np.transpose(self.img)
                 # Zeiss puts channel one as Green, then Red so, swap them again
                 self.img = np.flip(self.img,-1)
@@ -236,7 +239,7 @@ class Image:
                     for key,value in zip(keys,values):
                         if (not key in self.attachimage_metadata.keys()):
                             self.attachimage_metadata[key] = value
-                    # modify image for display
+                            # modify image for display
                     sizeX = self.attachimage_metadata['SizeX']
                     sizeY = self.attachimage_metadata['SizeY']
                     sizeC = self.attachimage_metadata['SizeC']
@@ -248,7 +251,7 @@ class Image:
                     # reduce pixel data format to 8 bits
                     if (bitsize>8):
                         img = np.uint8((img/(pow(2,bitsize)-1))*(pow(2,8)-1))
-                    # swap axis for XYC order 
+                        # swap axis for XYC order 
                     img = img.swapaxes(0,-1)
                     # flip image for top down orientation
                     img = np.flip(img,1)
@@ -263,7 +266,7 @@ class Image:
                     self.timestamps = attachment.data()
                     if ("SizeT" in self.metadata):
                         print('SizeT: ',self.metadata['SizeT'])
-                        self.timestamps = self.timestamps[0:self.metadata['SizeT']]
+                        self.timestamps = self.timestamps[0:int(self.metadata['SizeT'])]
                         
                 if attachment.attachment_entry.name == 'EventList':
                     self.attachment_names.append(attachment.attachment_entry.name)
@@ -321,7 +324,7 @@ class Image:
         else:
             print('Path to save or title not found!')
             plt.show()
-        
+            
     def select_roi_linescan(self):
         # Class method to select roi on a linescan time series image from Zeiss LSM microscope
         if(not self.img_type == "linescan timeseries"):
@@ -333,7 +336,7 @@ class Image:
         if (not hasattr(self,'eventtimes')):
             print('No eventtimes in the object')
             exit
-        # seperate trials/blocks and compartments from a given linescan image by finding breaks
+            # seperate trials/blocks and compartments from a given linescan image by finding breaks
         ts = self.timestamps
         eventtimes = self.eventtimes
 
@@ -347,7 +350,7 @@ class Image:
             triallen = len(ts[0:self.itrials[0]])
         if(len(self.itrials)==0):
             triallen = len(ts[0:-2])
-        self.itrials_end = self.itrials_begin + triallen
+            self.itrials_end = self.itrials_begin + triallen
 
         # split the eventtimes into eventtimes in each trial
         # convert event times to events
@@ -447,7 +450,7 @@ class Image:
                 # roidata[spinename]= background_subtraction(ts,spi,ts[np.where(evts>0)[0][0]])
                 # No background substration
                 roidata[spinename] = spi
-        # create pandas dataframe to store rois
+                # create pandas dataframe to store rois
         print(roidata)
         self.roidf = pd.DataFrame(roidata)
 
