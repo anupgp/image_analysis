@@ -12,10 +12,11 @@ sns.set()
 sns.set_style("white")
 sns.set_style("ticks")
 # ---------------
-font_path = '/Users/macbookair/.matplotlib/Fonts/Arial.ttf'
-fontprop = font_manager.FontProperties(fname=font_path,size=18)
+
 
 def format_plot(fh,ah,xlab="",ylab="",title=""):
+    font_path = '/Users/macbookair/.matplotlib/Fonts/Arial.ttf'
+    fontprop = font_manager.FontProperties(fname=font_path,size=18)
     ah.spines["right"].set_visible(False)
     ah.spines["top"].set_visible(False)
     ah.spines["bottom"].set_linewidth(1)
@@ -79,10 +80,10 @@ prpt = df[(df["itrial"]==1) & (df["roitype"] == "spine") & (df["stimfreq"]>=2) &
 prpt["delay"] = prpt["delay"]*1000
 # create a new MultiIndex for prpt
 prptmidx = prpt.set_index(["roiid","stimfreq","stimid"],drop=True)
-stimfreq=8
+stimfreq=20
 statmean = "nanmean"
 staterror = "nansem"
-param = "pr"
+param = "potency"
 # filter roiids
 roiids = df["roiid"].unique()
 srois = [roi for roi in roiids if re.search(".*spine.*",roi)]
@@ -107,28 +108,34 @@ prpt = prpt[~prpt.roiid.isin(omitrois)]
 prptstats = prpt.groupby(["stimfreq","stimid","roitype"])["pr","potency","delay"].apply(compute_simplestats) 
 # note: MultiIndex index and columns
 # plot individual data points using sns
-fh = plt.figure(figsize=(10,5))
+fh = plt.figure(figsize=(6,5))
 ah = fh.add_subplot(111)
-sns.scatterplot(x="stimid",y=param,hue="roiid",data=prpt[prpt["stimfreq"] == stimfreq],ax=ah,s=60)
+sns.scatterplot(x="stimid",y=param,hue="roiid",data=prpt[prpt["stimfreq"] == stimfreq],ax=ah,s=100)
 stats = prptstats.xs(("spine",stimfreq,param),level=("roitype","stimfreq",None),axis=0)[["nanmean","nansem","nanstd"]]
 stats["stimid"] = stats.index
-ah.errorbar(stats["stimid"],stats[statmean],stats[staterror])
+ah.errorbar(stats["stimid"],stats[statmean],stats[staterror],color='k',elinewidth=2)
 if param == "pr": ylab = "Release probability"
 if param == "potency": ylab = r"Potency ($\Delta$F/F)"
 if param == "delay": ylab = r"Delay (ms)"
-fh,ah = format_plot(fh,ah,"Stimulus number",ylab,"Stimulation at "+str(stimfreq)+"Hz")
+fh,ah = format_plot(fh,ah,"Stimulus number",ylab,"Stimulation frequency: " + str(stimfreq)+"Hz")
 # Shrink current axis by 20%
 box = ah.get_position()
 # Put a legend to the right of the current axis
-ah.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+# ah.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.tight_layout()
+ah.legend().set_visible(False)
 # plt.tight_layout(pad=0.4, w_pad=0.6, h_pad=1.0)
 # tight_layout(fig, rect=[0, 0, 0.5, 1])
 # ah.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+ah.set_xlim([0.5,8.5])
+ah.set_ylim([0,1.2])
+# figcaption = "Figure. Release probability computed by dividing the averaged number of successes with total number of trials for each stimulus in a train of 8 pulses"
+# ah.text(0,0,figcaption,fontsize=18)
+# fh.savefig(datapath+"iglusnfr_"+param+"_stim_number_"+str(stimfreq)+"Hz.png",transparent=True,dpi=300)
 # ----------------
 # perform paired t-test
 g1 = prpt[(prpt["stimfreq"]==stimfreq) & (prpt["stimid"]==1)][param].to_numpy()
-g2 = prpt[(prpt["stimfreq"]==stimfreq) & (prpt["stimid"]==2)][param].to_numpy()
+g2 = prpt[(prpt["stimfreq"]==stimfreq) & (prpt["stimid"]==3)][param].to_numpy()
 pval = scipystats.ttest_rel(g1,g2)
 print("pvalue: ",pval) 
 # ---------------

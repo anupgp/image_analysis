@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import copy
-import cv2
+# import cv2
 
 class roiLineScanClass:
     def __init__(self,_fh,_ah,_lsts,_ifirst,_ilast,_events): # A linescan timeseries matrix is iterated over trials for ROIs selection
