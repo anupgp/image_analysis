@@ -105,7 +105,7 @@ omitrois = list(set(omitrois2hz+omitrois8hz+omitrois20hz))
 prpt = prpt[~prpt.roiid.isin(omitrois)]
 # --------------
 # compute stats on prpt
-prptstats = prpt.groupby(["stimfreq","stimid","roitype"])["pr","potency","delay"].apply(compute_simplestats) 
+prptstats = prpt.groupby(["stimfreq","stimid","roitype"])[["pr","potency","delay"]].apply(compute_simplestats) 
 # note: MultiIndex index and columns
 # plot individual data points using sns
 fh = plt.figure(figsize=(6,5))
@@ -132,6 +132,7 @@ ah.set_ylim([0,1.2])
 # figcaption = "Figure. Release probability computed by dividing the averaged number of successes with total number of trials for each stimulus in a train of 8 pulses"
 # ah.text(0,0,figcaption,fontsize=18)
 # fh.savefig(datapath+"iglusnfr_"+param+"_stim_number_"+str(stimfreq)+"Hz.png",transparent=True,dpi=300)
+# plt.show()
 # ----------------
 # perform paired t-test
 g1 = prpt[(prpt["stimfreq"]==stimfreq) & (prpt["stimid"]==1)][param].to_numpy()
@@ -139,4 +140,5 @@ g2 = prpt[(prpt["stimfreq"]==stimfreq) & (prpt["stimid"]==3)][param].to_numpy()
 pval = scipystats.ttest_rel(g1,g2)
 print("pvalue: ",pval) 
 # ---------------
-plt.show()
+# compute pr across cells from different stimulation rates
+
