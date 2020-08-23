@@ -1,6 +1,0 @@
-import sys
-sys.path.insert('/Users/macbookair/codes/')
-import zeissImageClasses as zeiss
-from zeissImageClasses import compress_filename
-from matplotlib import pyplot as plt
-

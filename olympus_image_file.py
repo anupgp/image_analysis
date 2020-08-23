@@ -140,8 +140,8 @@ class OlympusImageClass:
         plt.show()
         return(fh,ah1)
 
-    def diplay_zprojection(self):
-        # display the z-projected image of a zstack
+    # def diplay_zprojection(self):
+    #     # display the z-projected image of a zstack
         
 class OlympusLineClass(OlympusImageClass):
     pass

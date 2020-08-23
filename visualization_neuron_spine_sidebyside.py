@@ -4,6 +4,7 @@ import sys
 import zeissImageClasses as zeiss
 from zeissImageClasses import compress_filename
 from matplotlib import pyplot as plt
+from general_functions import neuron_spine_plot
 
 datapath = '/Volumes/GoogleDrive/Shared drives/Beique Lab DATA/Imaging Data/LSM880 2P/Anup/'
 resultpath = "/Users/macbookair/goofy/data/beiquelab/grant"
@@ -15,5 +16,5 @@ fname_spine = 'Image 11.czi'          # zoom to spine
 neuron = zeiss.Image(os.path.join(datapath,subfolder,fname_neuron))
 spine = zeiss.Image(os.path.join(datapath,subfolder,fname_spine))
 fh1,ah1 = zeiss.display_image(spine.img,channels=[],title=fname_neuron,savepath="")
-# fh1,ah1 = zeiss.neuron_spine_plot(img1=neuron.img,sizeX = neuron.metadata['SizeX'],scaleX = neuron.metadata['ScalingX'],img2=spine.img,title="neuron_spine3",savepath="")
+fh1,ah1 = neuron_spine_plot(img1=neuron.img,sizeX = neuron.metadata['SizeX'],scaleX = neuron.metadata['ScalingX'],img2=spine.img,title="neuron_spine3",savepath="")
 plt.show()
