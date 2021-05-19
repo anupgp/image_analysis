@@ -60,43 +60,47 @@ def neuron_spine_plot(img1,sizeX,scaleX,img2,title=[],savepath=[]):
     # display the maximum projected framescan image
     if(len(img1.shape)>3):
         # stack of images XYZC
+        kernel = np.array([[[-1,-1,-1],[-1,4,-1],[-1,-1,-1]],[[-1,-1,-1],[-1,4,-1],[-1,-1,-1]],[[-1,-1,-1],[-1,4,-1],[-1,-1,-1]]])
+        img1 = np.max(img1,axis=-2)
+        print(img1.shape)
+        input()
         # kernel = np.array([[1,0,1,0,1],[0,1,1,1,0],[1,1,1,1,1],[0,1,1,1,0],[1,0,1,0,1]])
         # kernel = np.array([[-1,1,1,1,-1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1],[1,1,1,1,1]])
         # kernel = np.diag([1,1,1])
         # kernel =  np.flip(np.diag([1,1,1]),axis=-1)
         # kernel = np.ones((3,3),dtype=np.int)
         # kernel4d = kernel[:,:,None,None]
-        I = np.zeros((5,5))
-        I[2,2] = 1
-        img1 = gaussian_filter(img1,sigma=2)
+        # I = np.zeros((5,5))
+        # I[2,2] = 1
+        # img1 = gaussian_filter(img1,sigma=2)
         
-        # img1 = convolve(img1,kernel4d,mode='same')
+        img1 = convolve(img1,kernel)
 
         # img1 = np.concatenate((convolve_crazy(img1[:,:,:,0])[:,:,:,np.newaxis],convolve_crazy(img1[:,:,:,1])[:,:,:,np.newaxis]),axis=-1)
         
-        print(img1.shape)
-        img1c0 = np.max(img1[:,:,10:-10,0],axis=-1).astype('int')
-        img1c1 = np.max(img1[:,:,10:-10:,1],axis=-1).astype('int')
-    else:
-        img1c0 = img1(img1[:,:,0])
-        img1c1 = img1(img1[:,:,1])
-        # ----------
-    img1f = np.concatenate([img1c0[:,:,np.newaxis],img1c1[:,:,np.newaxis]],axis=-1)
-    img1f = np.max(img1f,axis=-1)
-    # img1f = np.max(img1f,axis=-1) - np.median(img1f,axis=-1) 
-    # img1f[np.where(img1f<230)] = 0
-    # img1f = medfilt(img1f,3)
-    # img1f = image_hist_equalization(img1f).astype('int')
-    # -------------
-    if(img2 is None):
-        img2 = np.random.randint(0,255,img1.shape[0:3])
+    #     print(img1.shape)
+    #     img1c0 = np.max(img1[:,:,10:-10,0],axis=-1).astype('int')
+    #     img1c1 = np.max(img1[:,:,10:-10:,1],axis=-1).astype('int')
+    # else:
+    #     img1c0 = img1(img1[:,:,0])
+    #     img1c1 = img1(img1[:,:,1])
+    #     # ----------
+    # img1f = np.concatenate([img1c0[:,:,np.newaxis],img1c1[:,:,np.newaxis]],axis=-1)
+    # img1f = np.max(img1f,axis=-1)
+    # # img1f = np.max(img1f,axis=-1) - np.median(img1f,axis=-1) 
+    # # img1f[np.where(img1f<230)] = 0
+    # # img1f = medfilt(img1f,3)
+    # # img1f = image_hist_equalization(img1f).astype('int')
+    # # -------------
+    # if(img2 is None):
+    #     img2 = np.random.randint(0,255,img1.shape[0:3])
 
-    img2 = np.concatenate((convolve_crazy(img2[:,:,0],3,15)[:,:,np.newaxis],convolve_crazy(img2[:,:,1],3,15)[:,:,np.newaxis]),axis=-1)
-    img2c0 = img2[:,:,0]
-    img2c1 = img2[:,:,1]
+    # img2 = np.concatenate((convolve_crazy(img2[:,:,0],3,15)[:,:,np.newaxis],convolve_crazy(img2[:,:,1],3,15)[:,:,np.newaxis]),axis=-1)
+    # img2c0 = img2[:,:,0]
+    # img2c1 = img2[:,:,1]
 
-    img2f = np.sum(np.concatenate([img2c0[:,:,np.newaxis],img2c1[:,:,np.newaxis]],axis=-1),axis=-1)
-    img2f = np.round(pow(img2f,1.2))
+    # img2f = np.sum(np.concatenate([img2c0[:,:,np.newaxis],img2c1[:,:,np.newaxis]],axis=-1),axis=-1)
+    # img2f = np.round(pow(img2f,1.2))
     # img2f[img2f>255] = 255
     
     # img2f[np.where(img2f<20)] = 0
@@ -131,19 +135,19 @@ def neuron_spine_plot(img1,sizeX,scaleX,img2,title=[],savepath=[]):
     ah.plot(scalebarX,np.ones(len(scalebarX))*(offsetY),color="white",linewidth=3)
     ah.text(offsetX,offsetY+35,r"$20\ \mu m$",color="white",fontsize=16)
     ah.axis('off')
-    ah.imshow(img1f,cmap="hot")
+    ah.imshow(img1,cmap="hot")
     # draw rectangle
     img1rect = Rectangle((235,260),20,50,linewidth=1,edgecolor="w",facecolor='none')
     ah.add_patch(img1rect)
     ah = fh.add_subplot(gsh[0,1])
     ah.axis('off')
     xlims_img2 = [80,380]
-    ah.imshow(img2f[:,xlims_img2[0]:xlims_img2[1]],cmap="hot")
-    offsetX = 30
-    offsetY = 30
-    scalebarX = np.arange(0+offsetX,80+offsetX+barX)
-    ah.plot(scalebarX,np.ones(len(scalebarX))*offsetY,color="w",linewidth=3)
-    ah.text(offsetX,offsetY+35,r"$20\ \mu m$",color="white",fontsize=16)
+    # ah.imshow(img2f[:,xlims_img2[0]:xlims_img2[1]],cmap="hot")
+    # offsetX = 30
+    # offsetY = 30
+    # scalebarX = np.arange(0+offsetX,80+offsetX+barX)
+    # ah.plot(scalebarX,np.ones(len(scalebarX))*offsetY,color="w",linewidth=3)
+    # ah.text(offsetX,offsetY+35,r"$20\ \mu m$",color="white",fontsize=16)
     # ah = fh.add_subplot(gsh[1,0])
     # ah.imshow(maxprojx)
     # ah.plot(scalebarX,np.ones(len(scalebarX))*offsetY,color="black",linewidth=2)

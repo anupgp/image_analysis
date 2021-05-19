@@ -1,0 +1,141 @@
+import os
+import re
+import tifffile
+from matplotlib import pyplot as plt
+from matplotlib.widgets import Slider  # import the Slider widget
+from matplotlib.widgets import Cursor
+import roilinescan_class
+import numpy as np
+
+metatags=["BitsPerPixel","DimensionOrder","SizeC","SizeT","SizeX","SizeY","SizeZ","HeightConvertValue","WidthConvertValue","Time Per Pixel","Time Per Line"]
+    
+
+def extract_metadata(metastr,metatags):
+    metadata = {} 
+    # extract values form the metadata string using the provided tags
+    for metatag in metatags:
+        pattern = "".join((".*",metatag,".*"))
+        line = [item for item in metastr.split("\n") if re.search(pattern, item)][0]
+        value = re.search("(?:^.*\=.)(.*)",line).group(1)
+        try:
+            conv_value = int(value)
+        except:
+            try:
+                conv_value = float(value)
+            except:
+                conv_value = value.strip()
+        metadata[metatag]=conv_value
+    return(metadata)
+
+
+class tiff_file:
+    def __init__(self,_fname):
+        self.fname = _fname
+        # check file exists
+        if (not (os.path.isfile(self.fname))):
+            print("file provided does not exists")
+            return
+        self.openfile()
+
+        
+    def openfile(self):
+        # extract metadata and imagedata
+        with tifffile.TiffFile(self.fname) as tif:
+            self.rawmetadata = tif.imagej_metadata
+            metastr = self.rawmetadata["Info"]
+            self.metadata = extract_metadata(metastr,metatags)
+            self.imagedata = tif.asarray()
+            # swap channels
+            print("DimesionOrder:",self.metadata["DimensionOrder"])
+            self.imagedata = np.swapaxes(self.imagedata,0,1)
+            # --------------------------
+
+    def showimage(self):
+        leftlim = 0
+        rightlim = self.metadata["SizeY"]
+        # def on_press(event):
+        #     print('you pressed', event.button, event.xdata, event.ydata)
+        #     nonlocal cursor
+                        
+        def leftupdate(left):
+            # caller function that executed when the slider is changed
+            nonlocal leftlim
+            nonlocal rightlim
+            leftlim = left
+            ah.set_xlim(leftlim,rightlim)
+            fh.canvas.draw_idle()
+        def rightupdate(right):
+            # caller function that executed when the slider is changed
+            nonlocal rightlim
+            nonlocal leftlim
+            rightlim = right
+            ah.set_xlim(leftlim,rightlim)
+            fh.canvas.draw_idle()
+            # ------------
+        fh = plt.figure()
+        ah = fh.add_subplot(111)
+        ahsl = fh.add_axes([0.1, 0.12, 0.8, 0.05])
+        ahsr = fh.add_axes([0.1, 0.05, 0.8, 0.05])
+        leftslider = Slider(ahsl,'left',0,self.metadata["SizeY"],valinit=200)
+        rightslider = Slider(ahsr,'right',0,self.metadata["SizeY"],valinit=500)
+        itrials_begin = [0]
+        itrials_end = [self.imagedata.shape[1]]
+        events = [np.zeros(itrials_end)]
+        roiselect = roilinescan_class.roiLineScanClass(fh,ah,self.imagedata[:,:,np.newaxis],0,itrials_begin,itrials_end,events)
+        
+        # cursor = Cursor(ah,vertOn=False,horizOn=True,color='yellow',linewidth=2)
+        # cid = fh.canvas.mpl_connect('button_press_event',on_press)
+        
+        ts = self.imagedata.mean(axis=1)
+        # ah.imshow(self.imagedata.T,cmap="hot",origin='lower')
+        # ah.imshow(self.imagedata.T,interpolation='nearest',cmap='hot',origin='lower',aspect='equal')
+        leftslider.on_changed(leftupdate)
+        rightslider.on_changed(rightupdate)
+        plt.show()
+            
+    def _def_(self):
+        classname = self.__class__.__name
+        print(classname.join(" destructed!"))
+
+dpath = "/Volumes/GoogleDrive/Shared drives/Beique Lab/PAST LAB MEMBERS/Cary Soares/SNIFFER DATA SHARED AUG 2020/CaryData/tiff_archive"
+project=["trains"]
+# get all the directories (cells)
+cells = [entry for entry in os.listdir(os.path.join(dpath,project[0])) if os.path.isdir(os.path.join(dpath,project[0],entry))]
+print("cells: ",cells)
+for i in range(len(cells)):
+    # get experiments (train frequencies used for each cell
+    exps = [entry for entry in os.listdir(os.path.join(dpath,project[0],cells[i])) if os.path.isdir(os.path.join(dpath,project[0],cells[i],entry))]
+    print("exp: ",exps)
+    for j in range(len(exps)):
+        print(exps[j])
+        tifs = [entry for entry in os.listdir(os.path.join(dpath,project[0],cells[i],exps[j])) if re.search(".*.tif",entry)]
+        tifgs = [entry for entry in tifs if re.search(".*_c0000_.*",entry)]
+        tifrs = [entry for entry in tifs if re.search(".*_c0001_.*",entry)]
+        for k in range(len(tifgs)):
+            filename = os.path.join(dpath,project[0],cells[i],exps[j],tifgs[k]) 
+            print("Opening file: ",filename)
+            tif=tiff_file(filename)
+            tif.showimage()
+            input()
+
+
+# for fname in tiffs0:
+#     uri = os.path.join(fpath,fname)
+#     print(uri)
+#     with tifffile.TiffFile(uri) as tif:
+#         print(len(tif.pages))
+#         print(dir(tif.pages))
+#         print(tif.series[0])
+#         for page in tif.pages:
+#             print(page.shape)
+#             print(page.dtype)
+#             print(dir(page))
+            # for tag in page.tags:
+            #     print(tag)
+            # print(page)
+        # input()
+        # image = tif.asarray()
+        # ts = image.mean(axis=1)
+        # metadata = tif.imagej_metadata
+
+

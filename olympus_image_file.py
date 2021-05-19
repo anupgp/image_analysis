@@ -119,7 +119,7 @@ class OlympusImageClass:
         print(markers)
         fh = plt.figure()
         ah1 = plt.subplot(111)
-        ah1.imshow(self.img[:,:,0],cmap="hot")
+        ah1.imshow(self.img[0,0,:,:],cmap="hot")
         # ah1.imshow(self.img)
         # display markers
         for marker in markers:

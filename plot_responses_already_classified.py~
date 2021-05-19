@@ -1,115 +1,15 @@
-import numpy as np
-import pandas as pd
-import math
-import re
-
-from matplotlib import pyplot as plt
-import matplotlib.font_manager as font_manager
-
-font_path = '/Users/macbookair/.matplotlib/Fonts/Arial.ttf'
-fontprop = font_manager.FontProperties(fname=font_path,size=18)
-
-# Set some pandas options
-pd.set_option('display.notebook_repr_html', False)
-# pd.set_option('display.max_columns', 10)
-# pd.set_option('display.max_rows', 10)
-
-def beautify_plot(fh,ah,xlab="",ylab=""):
-    ah.spines["right"].set_visible(False)
-    ah.spines["top"].set_visible(False)
-    ah.spines["bottom"].set_linewidth(1)
-    ah.spines["left"].set_linewidth(1)
-    ah.set_xlabel('Time (s)',FontProperties=fontprop)
-    ah.set_ylabel(r'$\Delta$F/F',fontproperties=fontprop)
-    ah.tick_params(axis='both',length=6,direction='out',width=1,which='major')
-    ah.tick_params(axis='both',length=3,direction='out',width=1,which='minor')
-    ah.tick_params(axis='both', which='major', labelsize=16)
-    ah.tick_params(axis='both', which='minor', labelsize=12)
-    return(fh,ah)
-    
-def extract_info_from_filename(fname):
-    print(fname)
-    fname = fname
-    roitype = re.search("(spine|dendrite)",fname)[0]
-    roicount = re.search("[(spine)|(dendrite)](\d+)",fname)[1]
-    roiid = re.search("^[0-9]{8,8}_.[^Image.*]+",fname)[0][0:-1]+"_"+roitype+roicount
-    roicount = int(roicount)
-    fileid = re.search("^.*?(?=(_delay))",fname)[0]
-    trialid = int(re.search("trial(\d+)",fname)[1])
-    stimfreq = int(re.search("_(\d+)Hz",fname)[1])
-    stimid = int(re.search("trace(\d+)",fname)[1])
-    delay =  float(re.search("delay(\d+)",fname)[1])/1000000
-    peak = float(re.search("(?<=peak).*",fname)[0])/1000000
-    record = {"fname0ext":fname,"fileid":fileid,"roiid":roiid,"roicount":roicount,"roitype":roitype,"trialid":trialid,"stimfreq":stimfreq,"stimid":stimid,"delay":delay,"peak":peak}
-    return(record)
-
-    
-# open the csv file containing the list of roi timeseries data
-datapath = '/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/' 
-fname = 'iglusnfr_response_traces_all.txt'
-batchfname = datapath + fname
-# ----------------
-with open(batchfname,'r') as csvfile:
-    batchcsv = pd.read_csv(csvfile)
-df = pd.DataFrame()
-traces = {}
-print("Total number of files:\t",len(batchcsv))
-
-for i in np.arange(0,len(batchcsv)):
-# for i in np.arange(0,1000): 
-    fname = batchcsv['filename'][i] # complete filename with path
-    fpath = re.search('^.+/+',fname)[0][0:-1] # path to filename
-    fname0ext = re.search('[^/]+.csv$',fname)[0][0:-4] # filename without extension
-    fileid = re.search("^.*?(?=(_delay))",fname0ext)[0]
-    record = extract_info_from_filename(fname0ext)
-    df = df.append(record,ignore_index = True)
-    dat = np.loadtxt(fname,delimiter=",")
-    traces[fileid] = dat
-# ------------------
-omitsrois2hz = ['20190418_S1E3_spine1']
-omitsrois8hz = [""]
-omitsrois20hz = ['20190801_S1C1S2_spine1','20190726_S1C1S1_spine1','20190725_S1C1S1_spine1']
-omitsrois = omitsrois2hz + omitsrois8hz + omitsrois20hz
-# print(df["roiid"].unique())
-# df = df[~df["roiid"].isin(omitsrois)]
-# print(df["roiid"].unique())
-# input("press a key")
-# ------------------
-# convert some columns from float to int dtype
-intcolumns = ["roicount","stimfreq","stimid","trialid"]
-for column in intcolumns:
-     df[column] = df[column].astype(int)
-# -----------------
-# print(traces)
-# -----------------
+# omitsrois2hz = ['20190418_S1E3_spine1']
+# omitsrois8hz = [""]
+# omitsrois20hz = ['20190801_S1C1S2_spine1','20190726_S1C1S1_spine1','20190725_S1C1S1_spine1']
+# omitsrois = omitsrois2hz + omitsrois8hz + omitsrois20hz
 # get all roiids
 roiids = df["roiid"].unique()
 print(roiids)
+print(df)
+spines = [roi for roi in roiids if re.search(".*spine.*",roi)]
+dendrites = [roi for roi in roiids if re.search(".*dendrite.*",roi)]
 
-srois = [roi for roi in roiids if re.search(".*spine.*",roi)]
-drois = [roi for roi in roiids if re.search(".*dendrite.*",roi)]
-# change index
-# df.index = df["roiid"]
-# find trial number per roiid,stimfreq & stimid
-df["numtrials"] = df.groupby(["roiid","stimfreq","stimid"])["trialid"].transform("count")
-df["itrial"] = df.groupby(["roiid","stimfreq","stimid"]).apply(
-    lambda x: pd.DataFrame({"itrial": np.arange(1,x["numtrials"].max()+1)},
-                           index=x.index))
-# find mean and standard deviation of noise peak across trials for each roiid
-df[["noise_avg","noise_std","threshold"]] = df.groupby(["roiid"]).apply(
-    # df[["noise_avg","noise_std","threshold"]] = df.groupby(["roiid","stimfreq"]).apply(
-# df[["noise_avg","noise_std","threshold","threshold2","threshold3"]] = df.groupby(["roiid"]).apply(
-    lambda x: pd.DataFrame({"noise_avg" : x[x["stimid"]==0]["peak"].mean(),
-                            "noise_std" : x[x["stimid"]==0]["peak"].std(),
-                            "threshold" : x[x["stimid"]==0]["peak"].mean() + (2*x[x["stimid"]==0]["peak"].std())
-                            # "threshold2": x[x["stimid"]==0]["peak"].mean() + (6*x[x["stimid"]==0]["peak"].std()),
-                            # "threshold3": x[x["stimid"]==0]["peak"].mean() + (7*x[x["stimid"]==0]["peak"].std())
-                            },index = x.index))
-# classify each response as success/failure if amplitude is above or equal /below noise_avg + (2*noise_std)
-# failure of release if the observed peak fluorescence is less than twice the standard deviation of the optical noise
-df[["success"]] = df.groupby(["roiid","stimfreq","itrial","stimid"]).apply(
-    lambda x: pd.DataFrame({"success" : x["peak"] >= x["threshold"]
-                            },index = x.index)) 
+
 # calssify all the traces to either success/failure
 # fileids_success = df[(df["success"] == True) & (df["roitype"] == "spine") & (df["stimid"] >  0) ]["fileid"]
 fileids_success = df[(~df["roiid"].isin(omitsrois)) & (df["success"] == True) & (df["roitype"] == "spine") & (df["stimid"] >  0) ]["fileid"]
@@ -237,9 +137,7 @@ success_figname = datapath + 'iglusnfr_ca1_farsuccess_allresponses_spine' + '.pn
 # fh2.savefig(failure_figname)
 # fh3.savefig(noise_figname)
 plt.show()
-# # -----------------
-df.sort_values(by=["roiid","stimfreq","stimid","itrial"],ascending=True,inplace=True)
-df.to_csv(datapath+"iglusnfr_ca1_main_dataframe_noise_per_roi2.csv",index=True)
+
 # # print(df)
 # # print(df["roiid"])
-input('key')
+# input('key')

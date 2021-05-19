@@ -13,7 +13,6 @@ import os
 
 # read masterfile in Microsoft_excel
 # masterfile_path = '/Users/macbookair/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/'
-masterfile_path = '/Volumes/UOTT JF/czi file/'
 image_path = '/Volumes/UOTT JF/czi file/'
 masterfname = masterfile_path + 'czifile.xlsx'
 masterdf = pd.read_excel(masterfname,header=0,use_cols=11)

@@ -1,0 +1,184 @@
+import pandas  as pd
+import numpy as np
+import os
+import re
+from matplotlib import pyplot as plt
+import matplotlib.font_manager as font_manager
+
+font_path = '/home/anup/.matplotlib/fonts/arial.ttf'
+fontprop = font_manager.FontProperties(fname=font_path,size=18)
+
+def beautify_plot(fh,ah,xlab="",ylab=""):
+    ah.spines["right"].set_visible(False)
+    ah.spines["top"].set_visible(False)
+    ah.spines["bottom"].set_linewidth(1)
+    ah.spines["left"].set_linewidth(1)
+    ah.set_xlabel('Time (s)',fontproperties=fontprop)
+    ah.set_ylabel(r'$\Delta$F/F',fontproperties=fontprop)
+    ah.tick_params(axis='both',length=6,direction='out',width=1,which='major')
+    ah.tick_params(axis='both',length=3,direction='out',width=1,which='minor')
+    ah.tick_params(axis='both', which='major', labelsize=16)
+    ah.tick_params(axis='both', which='minor', labelsize=12)
+    return(fh,ah)
+
+# open the dataframe with preclassified success and failures
+datapath = '/home/anup/goofy/data/beiquelab/iglusnfr_ca1culture/iglusnfr_analysis/' 
+fname_tarces = 'iglusnfr_response_traces_all.txt'
+fname_df = "iglusnfr_ca1_data_success_noise_mean_plus_4noise_std.csv"
+# ----------------
+df = pd.read_csv(os.path.join(datapath,fname_df))
+print(df.columns)
+traces = {}
+for i in np.arange(0,len(df)):
+    fname = df.loc[i,"fname"]
+    fname_trace = "".join((fname,".csv"))
+    expdate = str(df.loc[i,"expdate"])
+    folder = df.loc[i,"folder"]
+    path_trace = os.path.join(datapath,"_".join((expdate,folder)))
+    dat = np.loadtxt(os.path.join(path_trace,fname_trace),delimiter=",")
+    traces[fname] = dat
+# }
+# ----------------
+# omitsrois2hz = ['20190418_S1E3_spine1']
+# omitsrois8hz = [""]
+# omitsrois20hz = ['20190801_S1C1S2_spine1','20190726_S1C1S1_spine1','20190725_S1C1S1_spine1']
+# omitsrois = omitsrois2hz + omitsrois8hz + omitsrois20hz
+# get all roiids
+roinames = df["roiname"].unique()
+print(roinames)
+print(df)
+spines = [roi for roi in roinames if re.search(".*spine.*",roi)]
+dendrites = [roi for roi in roinames if re.search(".*dendrite.*",roi)]
+
+
+# calssify all the traces to either success/failure
+# fnames_success = df[(df["success"] == True) & (df["roitype"] == "spine") & (df["stimid"] >  0) ]["fname"]
+fnames_success = df[(df["success"] == True) & (df["roitype"] == "spine") & (df["stimid"] >  0) ]["fname"]
+# fnames_nearsuccess = df[(~df["roiname"].isin(omitsrois)) & (df["nearsuccess"] == True) & (df["roitype"] == "spine") & (df["stimid"] >  0) ]["fname"]
+fnames_failure = df[(df["success"] == False) & (df["roitype"] == "spine") & (df["stimid"] > 0) ]["fname"]
+fnames_noise = df[(df["roitype"] == "spine") & (df["stimid"] == 0) ]["fname"]
+# convert pandas series to list
+fnames_success = [item for item in fnames_success]
+# fnames_nearsuccess = [item for item in fnames_nearsuccess]
+fnames_failure = [item for item in fnames_failure]
+fnames_noise = [item for item in fnames_noise]
+
+ttrace = np.pad(traces[fnames_success[0]][0:80,0],(0,20),mode='reflect',reflect_type='odd').reshape(100,1)
+ysuccess = np.zeros((100,len(fnames_success)))
+yfailure = np.zeros((100,len(fnames_failure)))
+ynoise = np.zeros((100,len(fnames_noise)))
+
+# copy success and failure traces
+# remove the offset 
+for item in enumerate(fnames_success):
+    ysuccess[0:traces[item[1]].shape[0],item[0]] = traces[item[1]][:,1]-traces[item[1]][:,1][0]
+    
+for item in enumerate(fnames_failure):
+    yfailure[0:traces[item[1]].shape[0],item[0]] = traces[item[1]][:,1]-traces[item[1]][:,1][0]
+
+for item in enumerate(fnames_noise):
+    ynoise[0:traces[item[1]].shape[0],item[0]] = traces[item[1]][:,1]-traces[item[1]][:,1][0]
+    
+# compute averaged success and failure trace
+yavgsuccess = np.mean(ysuccess,axis = 1)
+yavgfailure = np.mean(yfailure,axis = 1)
+yavgnoise = np.mean(ynoise,axis = 1)
+
+# --------------------
+fh1 = plt.figure()
+ah1 = fh1.add_subplot(111)
+ah1tx = ah1.twinx()             # plot with two y-axis scales
+for i in np.arange(0,ysuccess.shape[1]):
+    ah1.plot(ttrace,ysuccess[:,i],color="grey")
+ah1.plot(ttrace,yavgsuccess,color="k")
+ah1tx.plot(ttrace,yavgsuccess,color="r")
+fh1,ah1 = beautify_plot(fh1,ah1)
+fh1,ah1tx = beautify_plot(fh1,ah1tx)
+ah1.set_title('Success: '+str(len(fnames_success))+'/'+str(len(fnames_success)+len(fnames_failure)),fontproperties=fontprop)
+# ah1.set_title('Far success (6>=thres<=7) / success: '+str(len(fnames_nearsuccess))+'/'+str(len(fnames_success)),fontproperties=fontprop)
+ah1.set_ylim([-2,3])
+yticks = np.array([-2,-1,0,1,2,3])
+ah1.set_yticks(yticks)
+ah1.set_xlim([0,0.1])
+xticks = np.array([0,0.02,0.04,0.06,0.08,0.1])
+ah1.set_xticks(xticks)
+ah1tx.set_ylabel(ah1.get_ylabel(),color='r')
+ah1tx.tick_params('y',colors='r')
+ah1tx.spines["right"].set_visible(True)
+ah1tx.spines["right"].set_color('r')
+ah1tx.spines["right"].set_linewidth(2)
+# ah1tx.set_ylim([-0.1,0.4])
+# ytickst = np.array([-0.1,0,0.1,0.2,0.3,0.4])
+ah1tx.set_ylim([-0.1,0.5])
+ytickst = np.array([-0.1,0.0,0.1,0.2,0.3,0.4,0.5])
+# ah1tx.set_ylim([-0.05,0.05])
+# ytickst = np.array([-0.05,-0.025,0,0.025,0.05])
+ah1tx.set_yticks(ytickst)
+fh1.tight_layout()
+# --------------------
+fh2 = plt.figure()
+ah2 = fh2.add_subplot(111)
+ah2tx = ah2.twinx()             # plot with two y-axis scales
+for i in np.arange(0,yfailure.shape[1]):
+    ah2.plot(ttrace,yfailure[:,i],color = "grey")
+ah2.plot(ttrace,yavgfailure,color="k")
+ah2tx.plot(ttrace,yavgfailure,color="r")
+ah2tx.plot(ttrace,yavgfailure-yavgnoise,color="blue")
+fh2,ah2 = beautify_plot(fh2,ah2)
+fh1,ah2tx = beautify_plot(fh1,ah2tx)
+ah2.set_title('Failure: '+str(len(fnames_failure))+'/'+str(len(fnames_success)+len(fnames_failure)),fontproperties=fontprop)
+ah2.set_ylim([-2,3])
+yticks = np.array([-2,-1,0,1,2,3])
+ah2.set_yticks(yticks)
+ah2.set_xlim([0,0.1])
+xticks = np.array([0,0.02,0.04,0.06,0.08,0.1])
+ah2.set_xticks(xticks)
+ah2tx.set_ylabel(ah1.get_ylabel(),color='r')
+ah2tx.tick_params('y',colors='r')
+ah2tx.spines["right"].set_visible(True)
+ah2tx.spines["right"].set_color('r')
+ah2tx.spines["right"].set_linewidth(2)
+ah2tx.set_ylim([-0.1,0.1])
+ytickst = np.array([-0.1,-0.05,0,0.05,0.1])
+ah2tx.set_yticks(ytickst)
+fh2.tight_layout()
+# --------------------
+fh3 = plt.figure()
+ah3 = fh3.add_subplot(111)
+ah3tx = ah3.twinx()             # plot with two y-axis scales
+for i in np.arange(0,ynoise.shape[1]):
+    ah3.plot(ttrace,ynoise[:,i],color="grey")
+ah3.plot(ttrace,yavgnoise,color="k")
+ah3tx.plot(ttrace,yavgnoise,color="r")
+fh3,ah3 = beautify_plot(fh3,ah3)
+fh3,ah3tx = beautify_plot(fh3,ah3tx)
+ah3.set_title('Noise: '+str(len(fnames_noise))+' traces',fontproperties=fontprop)
+ah3.set_ylim([-2,3])
+yticks = np.array([-2,-1,0,1,2,3])
+ah3.set_yticks(yticks)
+ah3.set_xlim([0,0.1])
+xticks = np.array([0,0.02,0.04,0.06,0.08,0.1])
+ah3.set_xticks(xticks)
+ah3tx.set_ylabel(ah1.get_ylabel(),color='r')
+ah3tx.tick_params('y',colors='r')
+ah3tx.spines["right"].set_visible(True)
+ah3tx.spines["right"].set_color('r')
+ah3tx.spines["right"].set_linewidth(2)
+ah3tx.set_ylim([-0.1,0.1])
+ytickst = np.array([-0.1,-0.05,0,0.05,0.1])
+ah3tx.set_yticks(ytickst)
+fh3.tight_layout()
+
+# # # -----------------
+
+success_figname = datapath + 'iglusnfr_ca1_farsuccess_allresponses_spine' + '.png'
+# failure_figname = datapath + 'iglusnfr_ca1_failure_allresponses_spine' + '.png'
+# noise_figname = datapath + 'iglusnfr_ca1_noise_allresponses_spine' + '.png'
+# fh1.savefig(success_figname)
+# fh2.savefig(failure_figname)
+# fh3.savefig(noise_figname)
+plt.show()
+
+# # print(df)
+# # print(df["roiname"])
+# input('key')

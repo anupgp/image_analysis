@@ -4,30 +4,35 @@ import copy
 # import cv2
 
 class roiLineScanClass:
-    def __init__(self,_fh,_ah,_lsts,_ifirst,_ilast,_events): # A linescan timeseries matrix is iterated over trials for ROIs selection
+    def __init__(self,_fh,_ah,_lsts,_channel=None,_ifirst=None,_ilast=None,_events=[],_label=""): # A linescan timeseries matrix is iterated over trials for ROIs selection
         self.fig = _fh
         self.lsts = _lsts
         self.ifirst = _ifirst
         self.ilast = _ilast
         self.events = _events
+        self.channel = _channel
         self.roicount = 0
         self.axis = _ah
         self.roi_initialize()
         self.key = None
         self.x = None
         self.y = None
+        self.label = _label
         self.coord = {'itrial':None,'iroi':None,'dnTop':None,'dnBot':None,'spTop':None,'spBot':None}
         self.coords=[]          # a list of all the ROI coordinates
-        self.titledisplay = self.axis.text(0.5,0.97,self.title,fontsize=14,horizontalalignment='center',verticalalignment='center',transform=self.fig.transFigure,weight='bold')
+        self.labeldisplay = self.axis.text(0.5,0.95,self.label,fontsize=14,horizontalalignment='center',verticalalignment='center',transform=self.fig.transFigure,weight=None)
+        self.titledisplay = self.axis.text(0.4,0.89,self.title,fontsize=14,horizontalalignment='center',verticalalignment='center',transform=self.fig.transFigure,weight=None)
         self.action = self.region+': '+self.boundary
-        self.actiondisplay = self.axis.text(0.5,0.93,self.action,fontsize=12,horizontalalignment='center',verticalalignment='center',transform=self.fig.transFigure)
+        self.actiondisplay = self.axis.text(0.2,0.89,self.action,fontsize=12,horizontalalignment='center',verticalalignment='center',transform=self.fig.transFigure)
         self.roicount_text = 'Number of ROIs saved: '+ str(self.roicount)
-        self.roicountdisplay = self.axis.text(0.5,0.89,self.roicount_text,fontsize=12,horizontalalignment='center',verticalalignment='center',transform=self.fig.transFigure)
+        self.roicountdisplay = self.axis.text(0.7,0.89,self.roicount_text,fontsize=12,horizontalalignment='center',verticalalignment='center',transform=self.fig.transFigure)
         self.connect()
 
     def roi_initialize(self):
         self.region = 'None'
         self.boundary = "None"
+        self.regioncolor = "black"
+        self.boundarycolor = "black"
         self.xyTdn = [None,None]
         self.xyBdn = [None,None]
         self.xyTsp = [None,None]
@@ -36,17 +41,17 @@ class roiLineScanClass:
         self.title = 'Trial: '+str(self.itrial)
         self.lsts0 = self.lsts[:,self.ifirst[self.itrial-1]:self.ilast[self.itrial-1]]
         self.events0 = self.events[self.itrial-1]
-        print(self.events)
+        # print("events: ",self.events)
         # print(self.lsts)
         # display linescan timeseries
-        self.ih = self.axis.imshow(self.lsts0[:,:,1],interpolation='nearest',cmap='jet',origin='lower',aspect='equal')
+        self.ih = self.axis.imshow(self.lsts0[:,:,self.channel],interpolation='nearest',cmap='jet',origin='lower',aspect='equal')
         # self.ih = self.axis.imshow(lsts0,interpolation='nearest',origin='lower',aspect='equal')
         # display events
         self.ph = self.axis.plot(np.arange(0,np.size(self.lsts0,1)),self.events0*np.size(self.lsts0,0),color="red",linewidth=1)
-        self.lineTdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTdn[1],self.xyTdn[1]],color='blue',linewidth=2)
-        self.lineBdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyBdn[1],self.xyBdn[1]],color='red',linewidth=2)
-        self.lineTsp, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTsp[1],self.xyTsp[1]],color='yellow',linewidth=2,linestyle='-')
-        self.lineBsp, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyBsp[1],self.xyBsp[1]],color='green',linewidth=2,linestyle='-')
+        self.lineTdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTdn[1],self.xyTdn[1]],color='black',linewidth=2)
+        self.lineBdn, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyBdn[1],self.xyBdn[1]],color='gray',linewidth=2)
+        self.lineTsp, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyTsp[1],self.xyTsp[1]],color='red',linewidth=2,linestyle='-')
+        self.lineBsp, = self.axis.plot(np.array(self.axis.get_xlim()),[self.xyBsp[1],self.xyBsp[1]],color='orange',linewidth=2,linestyle='-')
         # self.show_help()
         
     def clear_roi(self):
@@ -85,7 +90,7 @@ class roiLineScanClass:
             'p':self.region_spine,    # select region is spine
             't':self.boundary_top,    # select ROI top
             'b':self.boundary_bottom,  # select ROI bottom
-            'n':self.add_roi,     # save the current coordinates and start a new ROI
+            'n':self.add_roi,     # save the current coordinates and start a new ROI (one trial has atleast #1ROI)
             'N':self.next_trial     # save ROIs of the current trial and start a new trial
         }
         func = switcher.get(key,lambda:"Invalid key")
@@ -112,8 +117,8 @@ class roiLineScanClass:
         return(saved)
     
     def __call__(self,event):
-        if(event.name == 'button_press_event'):
-            print('button: ',event.button)
+        # if(event.name == 'button_press_event'):
+        #     print('button: ',event.button)
         if(event.inaxes is not None):
             if (self.region == "Dendrite" and self.boundary == 'Top'):
                 self.xyTdn = [event.xdata,event.ydata]
@@ -166,15 +171,25 @@ class roiLineScanClass:
         
     def region_dendrite(self):
         self.region  = "Dendrite"
+        self.regioncolor = "black"
 
     def region_spine(self):
         self.region = "Spine"
+        self.regioncolor = "red"
 
     def boundary_top(self):
         self.boundary = "Top"
+        if (self.region == "Dendrite"):
+            self.boundarycolor = "black"
+        if (self.region == "Spine"):
+            self.boundarycolor = "red"
         
     def boundary_bottom(self):
         self.boundary = "Bottom"
+        if (self.region == "Dendrite"):
+            self.boundarycolor = "gray"
+        if (self.region == "Spine"):
+            self.boundarycolor = "orange"
             
     def connect(self):
         'connect to all the events'
